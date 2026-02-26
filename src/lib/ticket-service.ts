@@ -120,11 +120,11 @@ export async function callNextTicket(counterId: string): Promise<Ticket | null> 
     return null;
   }
 
-  // Update ticket and counter
+  // Update ticket and counter - go directly to in_service
   const { data: updatedTicket, error } = await supabase
     .from("tickets")
     .update({
-      status: "called",
+      status: "in_service",
       counter_id: counterId,
       called_at: new Date().toISOString(),
     })
