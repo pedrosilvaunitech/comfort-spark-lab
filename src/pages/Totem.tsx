@@ -1,10 +1,11 @@
-import { useState, useEffect } from "react";
+import { useState, useEffect, useCallback } from "react";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent } from "@/components/ui/card";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { getServiceTypes, generateTicket } from "@/lib/ticket-service";
 import { printTicket } from "@/lib/print-service";
+import { supabase } from "@/integrations/supabase/client";
 import type { ServiceType, Ticket } from "@/lib/ticket-service";
 import { Printer, User, FileText, Heart, ArrowLeft } from "lucide-react";
 
@@ -20,9 +21,20 @@ const Totem = () => {
   const [generatedTicket, setGeneratedTicket] = useState<Ticket | null>(null);
   const [loading, setLoading] = useState(false);
 
-  useEffect(() => {
+  const loadServiceTypes = useCallback(() => {
     getServiceTypes().then(setServiceTypes).catch(console.error);
   }, []);
+
+  useEffect(() => {
+    loadServiceTypes();
+
+    const channel = supabase
+      .channel("totem-service-types")
+      .on("postgres_changes", { event: "*", schema: "public", table: "service_types" }, () => loadServiceTypes())
+      .subscribe();
+
+    return () => { supabase.removeChannel(channel); };
+  }, [loadServiceTypes]);
 
   const handleSelectType = (type: ServiceType) => {
     setSelectedType(type);

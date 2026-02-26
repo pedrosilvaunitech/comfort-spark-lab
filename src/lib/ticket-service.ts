@@ -35,12 +35,12 @@ export async function generateTicket(
 ): Promise<Ticket> {
   const today = new Date().toISOString().split("T")[0];
 
-  // Get or create daily sequence
+  // Get or create daily sequence (shared across all service types)
   const { data: seq } = await supabase
     .from("daily_sequence")
     .select("*")
     .eq("date", today)
-    .eq("service_type_id", serviceTypeId)
+    .is("service_type_id", null)
     .single();
 
   let nextNumber: number;
@@ -54,7 +54,7 @@ export async function generateTicket(
     nextNumber = 1;
     await supabase
       .from("daily_sequence")
-      .insert({ date: today, service_type_id: serviceTypeId, last_number: 1 });
+      .insert({ date: today, service_type_id: null, last_number: 1 });
   }
 
   // Get service type prefix
