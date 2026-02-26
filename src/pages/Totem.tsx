@@ -112,22 +112,6 @@ const Totem = () => {
             </button>
           ))}
 
-          {/* Priority toggle */}
-          <div className="md:col-span-3 flex justify-center gap-4 mt-4">
-            {(["normal", "priority", "preferential"] as const).map((t) => (
-              <Button
-                key={t}
-                variant={ticketType === t ? "default" : "outline"}
-                onClick={() => setTicketType(t)}
-                className={ticketType === t ? "" : "bg-card text-card-foreground border-2"}
-                size="lg"
-              >
-                {t === "normal" && "Normal"}
-                {t === "priority" && "🔴 Prioritário"}
-                {t === "preferential" && "💙 Preferencial"}
-              </Button>
-            ))}
-          </div>
         </div>
       )}
 
