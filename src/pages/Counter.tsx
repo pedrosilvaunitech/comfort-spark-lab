@@ -7,7 +7,6 @@ import { Label } from "@/components/ui/label";
 import {
   getCounters,
   callNextTicket,
-  startService,
   completeTicket,
   markNoShow,
 } from "@/lib/ticket-service";
@@ -15,7 +14,7 @@ import { printTicket } from "@/lib/print-service";
 import { useRealtimeTickets } from "@/hooks/use-realtime-tickets";
 import { useAuth } from "@/hooks/use-auth";
 import { supabase } from "@/integrations/supabase/client";
-import { Phone, CheckCircle, XCircle, Printer, SkipForward, LogOut } from "lucide-react";
+import { CheckCircle, XCircle, Printer, SkipForward, LogOut } from "lucide-react";
 import { toast } from "sonner";
 import { Link, Navigate, useLocation } from "react-router-dom";
 
@@ -27,7 +26,7 @@ const CounterPage = () => {
   );
   const [currentTicket, setCurrentTicket] = useState<any>(null);
   const [loading, setLoading] = useState(false);
-  const { counters, waitingTickets, refresh } = useRealtimeTickets();
+  const { counters, waitingTickets, calledTickets, refresh } = useRealtimeTickets();
 
   const selectedCounter = counters.find((c: any) => c.id === selectedCounterId);
 
@@ -36,7 +35,6 @@ const CounterPage = () => {
     else setCurrentTicket(null);
   }, [selectedCounter]);
 
-  // Update counter with operator name when selected
   useEffect(() => {
     if (selectedCounterId && user) {
       supabase.from("counters").update({ operator_name: user.user_metadata?.full_name || user.email }).eq("id", selectedCounterId);
@@ -49,12 +47,11 @@ const CounterPage = () => {
     try {
       const ticket = await callNextTicket(selectedCounterId);
       if (ticket) {
-        // Update operator_id on the ticket
         if (user) {
           await supabase.from("tickets").update({ operator_id: user.id }).eq("id", ticket.id);
         }
         setCurrentTicket(ticket);
-        toast.success(`Senha ${ticket.display_number} chamada!`);
+        toast.success(`Senha ${ticket.display_number} chamada e atendimento iniciado!`);
       } else {
         toast.info("Nenhuma senha na fila");
         setCurrentTicket(null);
@@ -62,12 +59,6 @@ const CounterPage = () => {
       refresh();
     } catch (err: any) { toast.error(err.message); }
     finally { setLoading(false); }
-  };
-
-  const handleStartService = async () => {
-    if (!currentTicket) return;
-    try { await startService(currentTicket.id); setCurrentTicket({ ...currentTicket, status: "in_service" }); toast.success("Atendimento iniciado"); refresh(); }
-    catch (err: any) { toast.error(err.message); }
   };
 
   const handleComplete = async () => {
@@ -89,8 +80,10 @@ const CounterPage = () => {
   };
 
   const statusColors: Record<string, string> = {
-    waiting: "bg-yellow-500 text-white", called: "bg-primary text-primary-foreground",
-    in_service: "bg-accent text-accent-foreground", completed: "bg-green-600 text-white",
+    waiting: "bg-yellow-500 text-white",
+    called: "bg-primary text-primary-foreground",
+    in_service: "bg-accent text-accent-foreground",
+    completed: "bg-green-600 text-white",
     no_show: "bg-destructive text-destructive-foreground",
   };
 
@@ -125,7 +118,8 @@ const CounterPage = () => {
           </CardContent>
         </Card>
 
-        <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
+        <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
+          {/* Senha Atual */}
           <Card>
             <CardHeader><CardTitle>Senha Atual</CardTitle></CardHeader>
             <CardContent className="space-y-4">
@@ -134,21 +128,16 @@ const CounterPage = () => {
                   <div className="text-center">
                     <p className="text-6xl font-black text-primary mb-2">{currentTicket.display_number}</p>
                     <Badge className={statusColors[currentTicket.status] || ""}>
-                      {currentTicket.status === "called" && "Chamado"}
                       {currentTicket.status === "in_service" && "Em Atendimento"}
+                      {currentTicket.status === "called" && "Chamado"}
                       {currentTicket.status === "waiting" && "Aguardando"}
                     </Badge>
                     {currentTicket.patient_name && <p className="mt-2 text-muted-foreground">{currentTicket.patient_name}</p>}
                   </div>
                   <div className="grid grid-cols-2 gap-2">
-                    {currentTicket.status === "called" && <Button onClick={handleStartService} className="bg-accent hover:bg-accent/90"><CheckCircle className="h-4 w-4 mr-2" /> Iniciar</Button>}
-                    {(currentTicket.status === "called" || currentTicket.status === "in_service") && (
-                      <>
-                        <Button onClick={handleComplete}><CheckCircle className="h-4 w-4 mr-2" /> Finalizar</Button>
-                        <Button onClick={handleNoShow} variant="destructive"><XCircle className="h-4 w-4 mr-2" /> Não Compareceu</Button>
-                      </>
-                    )}
-                    <Button onClick={handleReprint} variant="outline"><Printer className="h-4 w-4 mr-2" /> Reimprimir</Button>
+                    <Button onClick={handleComplete}><CheckCircle className="h-4 w-4 mr-2" /> Finalizar</Button>
+                    <Button onClick={handleNoShow} variant="destructive"><XCircle className="h-4 w-4 mr-2" /> Não Compareceu</Button>
+                    <Button onClick={handleReprint} variant="outline" className="col-span-2"><Printer className="h-4 w-4 mr-2" /> Reimprimir</Button>
                   </div>
                 </>
               ) : (
@@ -160,6 +149,7 @@ const CounterPage = () => {
             </CardContent>
           </Card>
 
+          {/* Fila de Espera */}
           <Card>
             <CardHeader><CardTitle>Fila de Espera ({waitingTickets.length})</CardTitle></CardHeader>
             <CardContent>
@@ -174,6 +164,27 @@ const CounterPage = () => {
                   </div>
                 ))}
                 {waitingTickets.length === 0 && <p className="text-sm text-muted-foreground text-center py-8">Fila vazia</p>}
+              </div>
+            </CardContent>
+          </Card>
+
+          {/* Senhas Chamadas / Em Atendimento */}
+          <Card>
+            <CardHeader><CardTitle>Chamadas Recentes ({calledTickets.length})</CardTitle></CardHeader>
+            <CardContent>
+              <div className="space-y-2 max-h-96 overflow-y-auto">
+                {calledTickets.map((t: any) => (
+                  <div key={t.id} className="flex items-center justify-between p-3 bg-muted rounded-lg">
+                    <div className="flex items-center gap-3">
+                      <span className="font-bold text-foreground">{t.display_number}</span>
+                      <Badge variant="outline" className="text-xs">
+                        {t.status === "in_service" ? "Atendendo" : "Chamado"}
+                      </Badge>
+                    </div>
+                    <span className="text-xs text-muted-foreground">{t.counters?.name || "—"}</span>
+                  </div>
+                ))}
+                {calledTickets.length === 0 && <p className="text-sm text-muted-foreground text-center py-8">Nenhuma chamada</p>}
               </div>
             </CardContent>
           </Card>

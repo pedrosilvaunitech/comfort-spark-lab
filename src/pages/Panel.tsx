@@ -1,33 +1,71 @@
 import { useRealtimeTickets } from "@/hooks/use-realtime-tickets";
-import { useEffect, useRef } from "react";
+import { useEffect, useRef, useState } from "react";
 import { Card, CardContent } from "@/components/ui/card";
+
+function parseTicketNumber(displayNumber: string): string {
+  // N0001 → "N 1", P0023 → "P 23"
+  const prefix = displayNumber.replace(/[0-9]/g, "");
+  const num = parseInt(displayNumber.replace(/[^0-9]/g, ""), 10);
+  return `${prefix} ${num}`;
+}
+
+function speakTicket(displayNumber: string, counterName: string) {
+  const parsed = parseTicketNumber(displayNumber);
+  const text = `Senha ${parsed}, dirija-se ao ${counterName}`;
+
+  // Cancel any ongoing speech
+  speechSynthesis.cancel();
+
+  const utterance = new SpeechSynthesisUtterance(text);
+  utterance.lang = "pt-BR";
+  utterance.rate = 0.9;
+  utterance.pitch = 1;
+
+  // Try to find a Google voice
+  const voices = speechSynthesis.getVoices();
+  const googleVoice = voices.find(
+    (v) => v.lang.startsWith("pt") && v.name.toLowerCase().includes("google")
+  );
+  if (googleVoice) {
+    utterance.voice = googleVoice;
+  } else {
+    // Fallback to any pt-BR voice
+    const ptVoice = voices.find((v) => v.lang.startsWith("pt-BR"));
+    if (ptVoice) utterance.voice = ptVoice;
+  }
+
+  speechSynthesis.speak(utterance);
+}
 
 const Panel = () => {
   const { calledTickets, waitingTickets, lastCalled } = useRealtimeTickets();
-  const audioRef = useRef<HTMLAudioElement | null>(null);
   const lastCalledIdRef = useRef<string | null>(null);
+  const [voicesLoaded, setVoicesLoaded] = useState(false);
 
-  // Play sound when new ticket is called
+  // Load voices
+  useEffect(() => {
+    const loadVoices = () => {
+      const voices = speechSynthesis.getVoices();
+      if (voices.length > 0) setVoicesLoaded(true);
+    };
+    loadVoices();
+    speechSynthesis.addEventListener("voiceschanged", loadVoices);
+    return () => speechSynthesis.removeEventListener("voiceschanged", loadVoices);
+  }, []);
+
+  // Speak when new ticket is called
   useEffect(() => {
     if (lastCalled && lastCalled.id !== lastCalledIdRef.current) {
       lastCalledIdRef.current = lastCalled.id;
-      // Use Web Speech API as bell
-      try {
-        const utterance = new SpeechSynthesisUtterance(
-          `Senha ${lastCalled.display_number}, dirija-se ao guichê`
-        );
-        utterance.lang = "pt-BR";
-        utterance.rate = 0.9;
-        speechSynthesis.speak(utterance);
-      } catch {}
+      const counterName = (lastCalled as any).counters?.name || "guichê";
+      speakTicket(lastCalled.display_number, counterName);
     }
-  }, [lastCalled]);
+  }, [lastCalled, voicesLoaded]);
 
   const currentCalled = calledTickets[0];
 
   return (
     <div className="min-h-screen bg-primary flex flex-col">
-      {/* Header */}
       <header className="bg-card shadow-lg p-4">
         <div className="container mx-auto flex items-center justify-between">
           <h1 className="text-2xl font-bold text-card-foreground">
@@ -45,7 +83,6 @@ const Panel = () => {
       </header>
 
       <main className="flex-1 container mx-auto p-6 grid grid-cols-1 lg:grid-cols-3 gap-6">
-        {/* Current Call - Large */}
         <div className="lg:col-span-2 flex items-center justify-center">
           {currentCalled ? (
             <Card className={`w-full max-w-2xl ${lastCalled?.id === currentCalled.id ? "animate-flash-call" : ""}`}>
@@ -79,9 +116,7 @@ const Panel = () => {
           )}
         </div>
 
-        {/* Recent calls + Queue */}
         <div className="space-y-6">
-          {/* Recent Calls */}
           <Card>
             <CardContent className="p-6">
               <h2 className="text-lg font-bold text-card-foreground mb-4 uppercase tracking-wider">
@@ -89,36 +124,22 @@ const Panel = () => {
               </h2>
               <div className="space-y-3">
                 {calledTickets.slice(0, 5).map((t: any) => (
-                  <div
-                    key={t.id}
-                    className="flex items-center justify-between p-3 rounded-lg bg-muted"
-                  >
-                    <span className="text-xl font-bold text-foreground">
-                      {t.display_number}
-                    </span>
-                    <span className="text-sm font-medium text-accent">
-                      {t.counters?.name || "—"}
-                    </span>
+                  <div key={t.id} className="flex items-center justify-between p-3 rounded-lg bg-muted">
+                    <span className="text-xl font-bold text-foreground">{t.display_number}</span>
+                    <span className="text-sm font-medium text-accent">{t.counters?.name || "—"}</span>
                   </div>
                 ))}
                 {calledTickets.length === 0 && (
-                  <p className="text-sm text-muted-foreground text-center py-4">
-                    Nenhuma senha chamada
-                  </p>
+                  <p className="text-sm text-muted-foreground text-center py-4">Nenhuma senha chamada</p>
                 )}
               </div>
             </CardContent>
           </Card>
 
-          {/* Queue Count */}
           <Card>
             <CardContent className="p-6 text-center">
-              <p className="text-sm text-muted-foreground uppercase tracking-wider mb-2">
-                Na Fila
-              </p>
-              <p className="text-5xl font-black text-primary">
-                {waitingTickets.length}
-              </p>
+              <p className="text-sm text-muted-foreground uppercase tracking-wider mb-2">Na Fila</p>
+              <p className="text-5xl font-black text-primary">{waitingTickets.length}</p>
               <p className="text-sm text-muted-foreground mt-1">
                 senha{waitingTickets.length !== 1 ? "s" : ""} aguardando
               </p>
