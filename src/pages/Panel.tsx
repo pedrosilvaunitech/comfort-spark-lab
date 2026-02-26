@@ -9,19 +9,56 @@ function parseTicketNumber(displayNumber: string): string {
   return `${prefix} ${num}`;
 }
 
-function speakTicket(displayNumber: string, counterName: string) {
+function playBeep(): Promise<void> {
+  return new Promise((resolve) => {
+    try {
+      const audioCtx = new (window.AudioContext || (window as any).webkitAudioContext)();
+      
+      // First beep
+      const osc1 = audioCtx.createOscillator();
+      const gain1 = audioCtx.createGain();
+      osc1.connect(gain1);
+      gain1.connect(audioCtx.destination);
+      osc1.frequency.value = 880;
+      osc1.type = "sine";
+      gain1.gain.setValueAtTime(0.5, audioCtx.currentTime);
+      gain1.gain.exponentialRampToValueAtTime(0.01, audioCtx.currentTime + 0.3);
+      osc1.start(audioCtx.currentTime);
+      osc1.stop(audioCtx.currentTime + 0.3);
+
+      // Second beep
+      const osc2 = audioCtx.createOscillator();
+      const gain2 = audioCtx.createGain();
+      osc2.connect(gain2);
+      gain2.connect(audioCtx.destination);
+      osc2.frequency.value = 1100;
+      osc2.type = "sine";
+      gain2.gain.setValueAtTime(0.5, audioCtx.currentTime + 0.35);
+      gain2.gain.exponentialRampToValueAtTime(0.01, audioCtx.currentTime + 0.65);
+      osc2.start(audioCtx.currentTime + 0.35);
+      osc2.stop(audioCtx.currentTime + 0.65);
+
+      setTimeout(resolve, 800);
+    } catch {
+      resolve();
+    }
+  });
+}
+
+async function speakTicket(displayNumber: string, counterName: string) {
   const parsed = parseTicketNumber(displayNumber);
   const text = `Senha ${parsed}, dirija-se ao ${counterName}`;
 
-  // Cancel any ongoing speech
   speechSynthesis.cancel();
+
+  // Play beep first, then speak
+  await playBeep();
 
   const utterance = new SpeechSynthesisUtterance(text);
   utterance.lang = "pt-BR";
   utterance.rate = 0.9;
   utterance.pitch = 1;
 
-  // Try to find a Google voice
   const voices = speechSynthesis.getVoices();
   const googleVoice = voices.find(
     (v) => v.lang.startsWith("pt") && v.name.toLowerCase().includes("google")
@@ -29,7 +66,6 @@ function speakTicket(displayNumber: string, counterName: string) {
   if (googleVoice) {
     utterance.voice = googleVoice;
   } else {
-    // Fallback to any pt-BR voice
     const ptVoice = voices.find((v) => v.lang.startsWith("pt-BR"));
     if (ptVoice) utterance.voice = ptVoice;
   }
