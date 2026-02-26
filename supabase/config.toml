@@ -1,0 +1,4 @@
+project_id = "pbjyudhxnhtxiblhkwgh"
+
+[functions.print-ticket]
+verify_jwt = false

@@ -1,0 +1,56 @@
+import { useEffect, useState, useCallback } from "react";
+import { supabase } from "@/integrations/supabase/client";
+import type { Ticket, Counter } from "@/lib/ticket-service";
+import { getCalledTickets, getWaitingTickets, getCounters } from "@/lib/ticket-service";
+
+export function useRealtimeTickets() {
+  const [calledTickets, setCalledTickets] = useState<any[]>([]);
+  const [waitingTickets, setWaitingTickets] = useState<any[]>([]);
+  const [counters, setCounters] = useState<any[]>([]);
+  const [lastCalled, setLastCalled] = useState<any | null>(null);
+
+  const refresh = useCallback(async () => {
+    const [called, waiting, ctrs] = await Promise.all([
+      getCalledTickets(),
+      getWaitingTickets(),
+      getCounters(),
+    ]);
+    setCalledTickets(called || []);
+    setWaitingTickets(waiting || []);
+    setCounters(ctrs || []);
+  }, []);
+
+  useEffect(() => {
+    refresh();
+
+    const ticketChannel = supabase
+      .channel("tickets-realtime")
+      .on(
+        "postgres_changes",
+        { event: "*", schema: "public", table: "tickets" },
+        (payload) => {
+          if (payload.eventType === "UPDATE" && (payload.new as any).status === "called") {
+            setLastCalled(payload.new);
+          }
+          refresh();
+        }
+      )
+      .subscribe();
+
+    const counterChannel = supabase
+      .channel("counters-realtime")
+      .on(
+        "postgres_changes",
+        { event: "*", schema: "public", table: "counters" },
+        () => refresh()
+      )
+      .subscribe();
+
+    return () => {
+      supabase.removeChannel(ticketChannel);
+      supabase.removeChannel(counterChannel);
+    };
+  }, [refresh]);
+
+  return { calledTickets, waitingTickets, counters, lastCalled, refresh };
+}
