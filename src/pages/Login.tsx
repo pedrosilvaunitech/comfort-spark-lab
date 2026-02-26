@@ -1,9 +1,10 @@
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import { supabase } from "@/integrations/supabase/client";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { toast } from "sonner";
 import { LogIn } from "lucide-react";
 import { useNavigate } from "react-router-dom";
@@ -11,17 +12,40 @@ import { useNavigate } from "react-router-dom";
 const Login = () => {
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
+  const [selectedCounterId, setSelectedCounterId] = useState("");
+  const [counters, setCounters] = useState<any[]>([]);
   const [loading, setLoading] = useState(false);
   const navigate = useNavigate();
 
+  useEffect(() => {
+    supabase
+      .from("counters")
+      .select("*")
+      .eq("is_active", true)
+      .order("number")
+      .then(({ data }) => setCounters(data || []));
+  }, []);
+
   const handleLogin = async (e: React.FormEvent) => {
     e.preventDefault();
+    if (!selectedCounterId) {
+      toast.error("Selecione o guichê");
+      return;
+    }
     setLoading(true);
     try {
-      const { error } = await supabase.auth.signInWithPassword({ email, password });
+      const { data: authData, error } = await supabase.auth.signInWithPassword({ email, password });
       if (error) throw error;
+
+      // Atualiza o guichê com o nome do operador
+      const user = authData.user;
+      await supabase
+        .from("counters")
+        .update({ operator_name: user?.user_metadata?.full_name || user?.email })
+        .eq("id", selectedCounterId);
+
       toast.success("Login realizado!");
-      navigate("/counter");
+      navigate("/counter", { state: { counterId: selectedCounterId } });
     } catch (err: any) {
       toast.error(err.message || "Erro ao fazer login");
     } finally {
@@ -47,7 +71,18 @@ const Login = () => {
               <Label htmlFor="password">Senha</Label>
               <Input id="password" type="password" value={password} onChange={(e) => setPassword(e.target.value)} required />
             </div>
-            <Button type="submit" disabled={loading} className="w-full">
+            <div>
+              <Label>Guichê</Label>
+              <Select value={selectedCounterId} onValueChange={setSelectedCounterId}>
+                <SelectTrigger><SelectValue placeholder="Selecione o guichê" /></SelectTrigger>
+                <SelectContent>
+                  {counters.map((c) => (
+                    <SelectItem key={c.id} value={c.id}>#{c.number} — {c.name}</SelectItem>
+                  ))}
+                </SelectContent>
+              </Select>
+            </div>
+            <Button type="submit" disabled={loading || !selectedCounterId} className="w-full">
               {loading ? "Entrando..." : "Entrar"}
             </Button>
           </form>

@@ -17,11 +17,14 @@ import { useAuth } from "@/hooks/use-auth";
 import { supabase } from "@/integrations/supabase/client";
 import { Phone, CheckCircle, XCircle, Printer, SkipForward, LogOut } from "lucide-react";
 import { toast } from "sonner";
-import { Link, Navigate } from "react-router-dom";
+import { Link, Navigate, useLocation } from "react-router-dom";
 
 const CounterPage = () => {
   const { user, loading: authLoading, isOperator, signOut } = useAuth();
-  const [selectedCounterId, setSelectedCounterId] = useState<string>("");
+  const location = useLocation();
+  const [selectedCounterId, setSelectedCounterId] = useState<string>(
+    (location.state as any)?.counterId || ""
+  );
   const [currentTicket, setCurrentTicket] = useState<any>(null);
   const [loading, setLoading] = useState(false);
   const { counters, waitingTickets, refresh } = useRealtimeTickets();
