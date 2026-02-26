@@ -35,10 +35,42 @@ const CounterPage = () => {
     else setCurrentTicket(null);
   }, [selectedCounter]);
 
+  const releaseCounter = async (counterId: string) => {
+    await supabase.from("counters").update({ operator_name: null, current_ticket_id: null }).eq("id", counterId);
+  };
+
   useEffect(() => {
     if (selectedCounterId && user) {
       supabase.from("counters").update({ operator_name: user.user_metadata?.full_name || user.email }).eq("id", selectedCounterId);
     }
+
+    // Release counter on page close/refresh
+    const handleBeforeUnload = () => {
+      if (selectedCounterId) {
+        const url = `${import.meta.env.VITE_SUPABASE_URL}/rest/v1/counters?id=eq.${selectedCounterId}`;
+        fetch(url, {
+          method: "PATCH",
+          headers: {
+            "Content-Type": "application/json",
+            "apikey": import.meta.env.VITE_SUPABASE_PUBLISHABLE_KEY,
+            "Authorization": `Bearer ${import.meta.env.VITE_SUPABASE_PUBLISHABLE_KEY}`,
+            "Prefer": "return=minimal",
+          },
+          body: JSON.stringify({ operator_name: null, current_ticket_id: null }),
+          keepalive: true,
+        });
+      }
+    };
+
+    window.addEventListener("beforeunload", handleBeforeUnload);
+
+    // Release counter on unmount (navigation away)
+    return () => {
+      window.removeEventListener("beforeunload", handleBeforeUnload);
+      if (selectedCounterId) {
+        releaseCounter(selectedCounterId);
+      }
+    };
   }, [selectedCounterId, user]);
 
   const handleCallNext = async () => {
@@ -100,7 +132,7 @@ const CounterPage = () => {
             <span className="text-sm text-muted-foreground">{user.user_metadata?.full_name || user.email}</span>
             <Link to="/panel"><Button variant="outline" size="sm">Painel</Button></Link>
             <Link to="/admin"><Button variant="outline" size="sm">Admin</Button></Link>
-            <Button variant="ghost" size="sm" onClick={signOut}><LogOut className="h-4 w-4" /></Button>
+            <Button variant="ghost" size="sm" onClick={async () => { if (selectedCounterId) await releaseCounter(selectedCounterId); signOut(); }}><LogOut className="h-4 w-4" /></Button>
           </div>
         </div>
       </header>
