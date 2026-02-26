@@ -1,9 +1,7 @@
 import { useRealtimeTickets } from "@/hooks/use-realtime-tickets";
 import { useEffect, useRef, useState } from "react";
-import { Card, CardContent } from "@/components/ui/card";
 
 function parseTicketNumber(displayNumber: string): string {
-  // N0001 → "N 1", P0023 → "P 23"
   const prefix = displayNumber.replace(/[0-9]/g, "");
   const num = parseInt(displayNumber.replace(/[^0-9]/g, ""), 10);
   return `${prefix} ${num}`;
@@ -13,8 +11,6 @@ function playBeep(): Promise<void> {
   return new Promise((resolve) => {
     try {
       const audioCtx = new (window.AudioContext || (window as any).webkitAudioContext)();
-      
-      // First beep
       const osc1 = audioCtx.createOscillator();
       const gain1 = audioCtx.createGain();
       osc1.connect(gain1);
@@ -26,7 +22,6 @@ function playBeep(): Promise<void> {
       osc1.start(audioCtx.currentTime);
       osc1.stop(audioCtx.currentTime + 0.3);
 
-      // Second beep
       const osc2 = audioCtx.createOscillator();
       const gain2 = audioCtx.createGain();
       osc2.connect(gain2);
@@ -50,8 +45,6 @@ async function speakTicket(displayNumber: string, counterName: string) {
   const text = `Senha ${parsed}, dirija-se ao ${counterName}`;
 
   speechSynthesis.cancel();
-
-  // Play beep first, then speak
   await playBeep();
 
   const utterance = new SpeechSynthesisUtterance(text);
@@ -74,11 +67,10 @@ async function speakTicket(displayNumber: string, counterName: string) {
 }
 
 const Panel = () => {
-  const { calledTickets, waitingTickets, lastCalled } = useRealtimeTickets();
+  const { calledTickets, lastCalled } = useRealtimeTickets();
   const lastCalledIdRef = useRef<string | null>(null);
   const [voicesLoaded, setVoicesLoaded] = useState(false);
 
-  // Load voices
   useEffect(() => {
     const loadVoices = () => {
       const voices = speechSynthesis.getVoices();
@@ -89,7 +81,6 @@ const Panel = () => {
     return () => speechSynthesis.removeEventListener("voiceschanged", loadVoices);
   }, []);
 
-  // Speak when new ticket is called
   useEffect(() => {
     if (lastCalled && lastCalled.id !== lastCalledIdRef.current) {
       lastCalledIdRef.current = lastCalled.id;
@@ -99,90 +90,64 @@ const Panel = () => {
   }, [lastCalled, voicesLoaded]);
 
   const currentCalled = calledTickets[0];
+  const recentCalled = calledTickets.slice(1, 5);
+
+  const getServiceTypeName = (ticket: any) => {
+    return ticket?.service_types?.name || "Convencional";
+  };
+
+  const getCounterName = (ticket: any) => {
+    return ticket?.counters?.name || "Guichê";
+  };
 
   return (
     <div className="min-h-screen bg-primary flex flex-col">
-      <header className="bg-card shadow-lg p-4">
-        <div className="container mx-auto flex items-center justify-between">
-          <h1 className="text-2xl font-bold text-card-foreground">
-            Painel de Chamadas
-          </h1>
-          <div className="text-sm text-muted-foreground">
-            {new Date().toLocaleDateString("pt-BR", {
-              weekday: "long",
-              year: "numeric",
-              month: "long",
-              day: "numeric",
-            })}
-          </div>
-        </div>
-      </header>
-
-      <main className="flex-1 container mx-auto p-6 grid grid-cols-1 lg:grid-cols-3 gap-6">
-        <div className="lg:col-span-2 flex items-center justify-center">
-          {currentCalled ? (
-            <Card className={`w-full max-w-2xl ${lastCalled?.id === currentCalled.id ? "animate-flash-call" : ""}`}>
-              <CardContent className="p-12 text-center space-y-6">
-                <p className="text-lg text-muted-foreground uppercase tracking-widest font-semibold">
-                  Senha Atual
+      {/* Main ticket area */}
+      <div className="flex-1 flex flex-col items-center justify-center px-8 py-6">
+        {currentCalled ? (
+          <div className={`text-center ${lastCalled?.id === currentCalled.id ? "animate-flash-call" : ""}`}>
+            <p className="text-2xl md:text-3xl font-semibold text-primary-foreground/80 italic mb-2">
+              {getServiceTypeName(currentCalled)}
+            </p>
+            <div className="flex items-center justify-center gap-6 md:gap-10">
+              <span className="text-[8rem] md:text-[12rem] lg:text-[16rem] font-black text-warning leading-none tracking-wider">
+                {currentCalled.display_number}
+              </span>
+              <div className="text-right">
+                <p className="text-3xl md:text-5xl lg:text-6xl font-bold text-primary-foreground">
+                  {getCounterName(currentCalled)}
                 </p>
-                <div className="text-9xl font-black text-primary tracking-wider">
-                  {currentCalled.display_number}
-                </div>
-                <div className="flex items-center justify-center gap-3">
-                  <span className="text-3xl font-bold text-accent">
-                    → {(currentCalled as any).counters?.name || "Guichê"}
+              </div>
+            </div>
+          </div>
+        ) : (
+          <p className="text-3xl md:text-5xl text-primary-foreground/60 font-semibold">
+            Aguardando chamada...
+          </p>
+        )}
+      </div>
+
+      {/* Recent tickets bar */}
+      <div className="bg-primary/80 border-t-4 border-primary-foreground/20">
+        <div className="grid grid-cols-4 divide-x divide-primary-foreground/20">
+          {recentCalled.length > 0
+            ? recentCalled.map((t: any) => (
+                <div key={t.id} className="flex flex-col items-center justify-center py-4 px-2">
+                  <span className="text-3xl md:text-5xl font-black text-primary-foreground tracking-wider">
+                    {t.display_number}
+                  </span>
+                  <span className="text-sm md:text-lg font-medium text-primary-foreground/70 mt-1">
+                    {t.counters?.name || "Guichê"}
                   </span>
                 </div>
-                {currentCalled.patient_name && (
-                  <p className="text-xl text-muted-foreground">
-                    {currentCalled.patient_name}
-                  </p>
-                )}
-              </CardContent>
-            </Card>
-          ) : (
-            <Card className="w-full max-w-2xl">
-              <CardContent className="p-12 text-center">
-                <p className="text-2xl text-muted-foreground">
-                  Aguardando chamada...
-                </p>
-              </CardContent>
-            </Card>
-          )}
+              ))
+            : Array.from({ length: 4 }).map((_, i) => (
+                <div key={i} className="flex items-center justify-center py-4 px-2">
+                  <span className="text-2xl text-primary-foreground/30">—</span>
+                </div>
+              ))}
         </div>
-
-        <div className="space-y-6">
-          <Card>
-            <CardContent className="p-6">
-              <h2 className="text-lg font-bold text-card-foreground mb-4 uppercase tracking-wider">
-                Últimas Chamadas
-              </h2>
-              <div className="space-y-3">
-                {calledTickets.slice(0, 5).map((t: any) => (
-                  <div key={t.id} className="flex items-center justify-between p-3 rounded-lg bg-muted">
-                    <span className="text-xl font-bold text-foreground">{t.display_number}</span>
-                    <span className="text-sm font-medium text-accent">{t.counters?.name || "—"}</span>
-                  </div>
-                ))}
-                {calledTickets.length === 0 && (
-                  <p className="text-sm text-muted-foreground text-center py-4">Nenhuma senha chamada</p>
-                )}
-              </div>
-            </CardContent>
-          </Card>
-
-          <Card>
-            <CardContent className="p-6 text-center">
-              <p className="text-sm text-muted-foreground uppercase tracking-wider mb-2">Na Fila</p>
-              <p className="text-5xl font-black text-primary">{waitingTickets.length}</p>
-              <p className="text-sm text-muted-foreground mt-1">
-                senha{waitingTickets.length !== 1 ? "s" : ""} aguardando
-              </p>
-            </CardContent>
-          </Card>
-        </div>
-      </main>
+      </div>
     </div>
   );
 };
