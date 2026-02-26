@@ -26,6 +26,10 @@ const Login = () => {
       .then(({ data }) => setCounters(data || []));
   }, []);
 
+  const isCounterOccupied = (counter: any) => {
+    return !!counter.operator_name && !!counter.current_ticket_id;
+  };
+
   const handleLogin = async (e: React.FormEvent) => {
     e.preventDefault();
     if (!selectedCounterId) {
@@ -76,8 +80,10 @@ const Login = () => {
               <Select value={selectedCounterId} onValueChange={setSelectedCounterId}>
                 <SelectTrigger><SelectValue placeholder="Selecione o guichê" /></SelectTrigger>
                 <SelectContent>
-                  {counters.map((c) => (
-                    <SelectItem key={c.id} value={c.id}>#{c.number} — {c.name}</SelectItem>
+                {counters.map((c) => (
+                    <SelectItem key={c.id} value={c.id} disabled={isCounterOccupied(c)}>
+                      #{c.number} — {c.name} {isCounterOccupied(c) ? `(Ocupado: ${c.operator_name})` : "(Livre)"}
+                    </SelectItem>
                   ))}
                 </SelectContent>
               </Select>
