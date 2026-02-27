@@ -11,17 +11,22 @@ export function useRealtimeTickets() {
   const lastCalledIdRef = useRef<string | null>(null);
 
   const refresh = useCallback(async () => {
-    const [called, waiting, ctrs] = await Promise.all([
+    const [calledResult, waitingResult, ctrsResult] = await Promise.allSettled([
       getCalledTickets(),
       getWaitingTickets(),
       getCounters(),
     ]);
-    setCalledTickets(called || []);
-    setWaitingTickets(waiting || []);
-    setCounters(ctrs || []);
+
+    const called = calledResult.status === "fulfilled" ? calledResult.value || [] : [];
+    const waiting = waitingResult.status === "fulfilled" ? waitingResult.value || [] : [];
+    const ctrs = ctrsResult.status === "fulfilled" ? ctrsResult.value || [] : [];
+
+    setCalledTickets(called);
+    setWaitingTickets(waiting);
+    setCounters(ctrs);
 
     // Detect new called/in_service ticket with full join data
-    if (called && called.length > 0) {
+    if (called.length > 0) {
       const newest = called[0];
       if (newest.id !== lastCalledIdRef.current) {
         lastCalledIdRef.current = newest.id;
