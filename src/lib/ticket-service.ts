@@ -20,7 +20,7 @@ export async function getServiceTypes() {
 export async function getCounters() {
   const { data, error } = await supabase
     .from("counters")
-    .select("*, tickets:current_ticket_id!counters_current_ticket_fk(*)")
+    .select("*, tickets!counters_current_ticket_fk(*)")
     .eq("is_active", true)
     .order("number");
   if (error) throw error;
