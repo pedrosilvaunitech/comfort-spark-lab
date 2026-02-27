@@ -186,7 +186,8 @@ export async function getCalledTickets() {
   const { data, error } = await supabase
     .from("tickets")
     .select("*, service_types(*), counters!tickets_counter_id_fkey(*)")
-    .in("status", ["called", "in_service"])
+    .in("status", ["called", "in_service", "completed", "no_show"])
+    .not("called_at", "is", null)
     .order("called_at", { ascending: false })
     .limit(10);
   if (error) throw error;
