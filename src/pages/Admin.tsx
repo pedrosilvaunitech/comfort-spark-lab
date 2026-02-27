@@ -14,6 +14,7 @@ import {
   getTodayTickets,
   getPrintLogs,
   getPendingPrints,
+  resetAllTickets,
 } from "@/lib/ticket-service";
 import { printViaBrowser, printViaPrintServer, printViaCloud } from "@/lib/print-service";
 import type { PrintConfig, TicketLayout } from "@/lib/print-service";
@@ -26,7 +27,7 @@ import { toast } from "sonner";
 import { Link, Navigate } from "react-router-dom";
 import {
   Printer, Settings, FileText, History, RefreshCw, Save, TestTube,
-  LayoutTemplate, Users, Monitor, BarChart3, LogOut,
+  LayoutTemplate, Users, Monitor, BarChart3, LogOut, Trash2,
 } from "lucide-react";
 
 const Admin = () => {
@@ -106,6 +107,11 @@ const Admin = () => {
             <h1 className="text-xl font-bold text-card-foreground">Administração</h1>
           </div>
           <div className="flex gap-2">
+            <Button variant="destructive" size="sm" onClick={async () => {
+              if (!confirm("Tem certeza que deseja zerar todas as senhas de hoje?")) return;
+              try { await resetAllTickets(); loadData(); toast.success("Senhas zeradas com sucesso!"); }
+              catch { toast.error("Erro ao zerar senhas"); }
+            }}><Trash2 className="h-4 w-4 mr-1" />Zerar Senhas</Button>
             <Link to="/totem"><Button variant="outline" size="sm">Totem</Button></Link>
             <Link to="/panel"><Button variant="outline" size="sm">Painel</Button></Link>
             <Link to="/counter"><Button variant="outline" size="sm">Guichê</Button></Link>

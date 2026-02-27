@@ -256,3 +256,20 @@ export async function getPendingPrints() {
   if (error) throw error;
   return data;
 }
+
+export async function resetAllTickets() {
+  const today = new Date().toISOString().split("T")[0];
+
+  // Reset all counters' current ticket
+  await supabase.from("counters").update({ current_ticket_id: null }).neq("id", "00000000-0000-0000-0000-000000000000");
+
+  // Cancel all waiting/called/in_service tickets for today
+  await supabase
+    .from("tickets")
+    .update({ status: "cancelled", completed_at: new Date().toISOString() })
+    .gte("created_at", `${today}T00:00:00`)
+    .in("status", ["waiting", "called", "in_service"]);
+
+  // Reset daily sequence
+  await supabase.from("daily_sequence").update({ last_number: 0 }).eq("date", today);
+}
