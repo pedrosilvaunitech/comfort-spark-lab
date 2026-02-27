@@ -7,26 +7,6 @@ export function useAuth() {
   const [loading, setLoading] = useState(true);
   const [roles, setRoles] = useState<string[]>([]);
 
-  useEffect(() => {
-    const { data: { subscription } } = supabase.auth.onAuthStateChange((_event, session) => {
-      setUser(session?.user ?? null);
-      if (session?.user) {
-        fetchRoles(session.user.id);
-      } else {
-        setRoles([]);
-      }
-      setLoading(false);
-    });
-
-    supabase.auth.getSession().then(({ data: { session } }) => {
-      setUser(session?.user ?? null);
-      if (session?.user) fetchRoles(session.user.id);
-      setLoading(false);
-    });
-
-    return () => subscription.unsubscribe();
-  }, []);
-
   const fetchRoles = async (userId: string) => {
     const { data } = await supabase
       .from("user_roles")
@@ -34,6 +14,28 @@ export function useAuth() {
       .eq("user_id", userId);
     setRoles(data?.map((r) => r.role) || []);
   };
+
+  useEffect(() => {
+    const { data: { subscription } } = supabase.auth.onAuthStateChange(async (_event, session) => {
+      setUser(session?.user ?? null);
+      if (session?.user) {
+        await fetchRoles(session.user.id);
+      } else {
+        setRoles([]);
+      }
+      setLoading(false);
+    });
+
+    supabase.auth.getSession().then(async ({ data: { session } }) => {
+      setUser(session?.user ?? null);
+      if (session?.user) {
+        await fetchRoles(session.user.id);
+      }
+      setLoading(false);
+    });
+
+    return () => subscription.unsubscribe();
+  }, []);
 
   const isAdmin = roles.includes("admin");
   const isOperator = roles.includes("operator") || isAdmin;
