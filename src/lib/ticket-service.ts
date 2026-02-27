@@ -20,7 +20,7 @@ export async function getServiceTypes() {
 export async function getCounters() {
   const { data, error } = await supabase
     .from("counters")
-    .select("*, tickets:current_ticket_id(*)")
+    .select("*, tickets:current_ticket_id!counters_current_ticket_fk(*)")
     .eq("is_active", true)
     .order("number");
   if (error) throw error;
@@ -185,7 +185,7 @@ export async function getWaitingTickets() {
 export async function getCalledTickets() {
   const { data, error } = await supabase
     .from("tickets")
-    .select("*, service_types(*), counters(*)")
+    .select("*, service_types(*), counters!tickets_counter_id_fkey(*)")
     .in("status", ["called", "in_service"])
     .order("called_at", { ascending: false })
     .limit(10);
@@ -197,7 +197,7 @@ export async function getTodayTickets() {
   const today = new Date().toISOString().split("T")[0];
   const { data, error } = await supabase
     .from("tickets")
-    .select("*, service_types(*), counters(*)")
+    .select("*, service_types(*), counters!tickets_counter_id_fkey(*)")
     .gte("created_at", `${today}T00:00:00`)
     .order("created_at", { ascending: false });
   if (error) throw error;
