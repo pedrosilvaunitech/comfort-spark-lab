@@ -1,4 +1,4 @@
-import { useEffect, useState, useCallback } from "react";
+import { useEffect, useState, useCallback, useRef } from "react";
 import { supabase } from "@/integrations/supabase/client";
 import type { Ticket, Counter } from "@/lib/ticket-service";
 import { getCalledTickets, getWaitingTickets, getCounters } from "@/lib/ticket-service";
@@ -8,6 +8,7 @@ export function useRealtimeTickets() {
   const [waitingTickets, setWaitingTickets] = useState<any[]>([]);
   const [counters, setCounters] = useState<any[]>([]);
   const [lastCalled, setLastCalled] = useState<any | null>(null);
+  const lastCalledIdRef = useRef<string | null>(null);
 
   const refresh = useCallback(async () => {
     const [called, waiting, ctrs] = await Promise.all([
@@ -18,6 +19,15 @@ export function useRealtimeTickets() {
     setCalledTickets(called || []);
     setWaitingTickets(waiting || []);
     setCounters(ctrs || []);
+
+    // Detect new called/in_service ticket with full join data
+    if (called && called.length > 0) {
+      const newest = called[0];
+      if (newest.id !== lastCalledIdRef.current) {
+        lastCalledIdRef.current = newest.id;
+        setLastCalled(newest);
+      }
+    }
   }, []);
 
   useEffect(() => {
@@ -28,10 +38,7 @@ export function useRealtimeTickets() {
       .on(
         "postgres_changes",
         { event: "*", schema: "public", table: "tickets" },
-        (payload) => {
-          if (payload.eventType === "UPDATE" && (payload.new as any).status === "called") {
-            setLastCalled(payload.new);
-          }
+        () => {
           refresh();
         }
       )
