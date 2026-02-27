@@ -72,6 +72,16 @@ serve(async (req) => {
       });
     }
 
+    if (action === "update_password") {
+      const { userId, password } = body;
+      const { error } = await supabaseAdmin.auth.admin.updateUserById(userId, { password });
+      if (error) throw error;
+
+      return new Response(JSON.stringify({ success: true }), {
+        headers: { ...corsHeaders, "Content-Type": "application/json" },
+      });
+    }
+
     throw new Error("Ação inválida");
   } catch (err) {
     return new Response(JSON.stringify({ error: err.message }), {
