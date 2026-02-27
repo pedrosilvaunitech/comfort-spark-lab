@@ -30,10 +30,14 @@ const CounterPage = () => {
 
   const selectedCounter = counters.find((c: any) => c.id === selectedCounterId);
 
+  // Sync currentTicket from realtime counter data
   useEffect(() => {
-    if (selectedCounter?.tickets) setCurrentTicket(selectedCounter.tickets);
-    else setCurrentTicket(null);
-  }, [selectedCounter]);
+    if (selectedCounter?.tickets) {
+      setCurrentTicket(selectedCounter.tickets);
+    } else if (selectedCounter && !selectedCounter.current_ticket_id) {
+      setCurrentTicket(null);
+    }
+  }, [selectedCounter, counters]);
 
   const releaseCounter = async (counterId: string) => {
     await supabase.from("counters").update({ operator_name: null, current_ticket_id: null }).eq("id", counterId);
