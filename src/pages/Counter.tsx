@@ -14,7 +14,7 @@ import { printTicket } from "@/lib/print-service";
 import { useRealtimeTickets } from "@/hooks/use-realtime-tickets";
 import { useAuth } from "@/hooks/use-auth";
 import { supabase } from "@/integrations/supabase/client";
-import { CheckCircle, XCircle, Printer, SkipForward, LogOut } from "lucide-react";
+import { CheckCircle, XCircle, Printer, SkipForward, LogOut, Volume2 } from "lucide-react";
 import { toast } from "sonner";
 import { Link, Navigate, useLocation } from "react-router-dom";
 
@@ -118,6 +118,16 @@ const CounterPage = () => {
     catch { toast.error("Erro ao reimprimir"); }
   };
 
+  const handleRecall = async () => {
+    if (!currentTicket || !selectedCounterId) return;
+    try {
+      // Update called_at to trigger realtime announcement on the Panel
+      await supabase.from("tickets").update({ called_at: new Date().toISOString() }).eq("id", currentTicket.id);
+      toast.success(`Senha ${currentTicket.display_number} rechamada!`);
+      refresh();
+    } catch { toast.error("Erro ao rechamar"); }
+  };
+
   const statusColors: Record<string, string> = {
     waiting: "bg-yellow-500 text-white",
     called: "bg-primary text-primary-foreground",
@@ -176,6 +186,7 @@ const CounterPage = () => {
                   <div className="grid grid-cols-2 gap-2">
                     <Button onClick={handleComplete}><CheckCircle className="h-4 w-4 mr-2" /> Finalizar</Button>
                     <Button onClick={handleNoShow} variant="destructive"><XCircle className="h-4 w-4 mr-2" /> Não Compareceu</Button>
+                    <Button onClick={handleRecall} variant="secondary" className="col-span-2"><Volume2 className="h-4 w-4 mr-2" /> Rechamar</Button>
                     <Button onClick={handleReprint} variant="outline" className="col-span-2"><Printer className="h-4 w-4 mr-2" /> Reimprimir</Button>
                   </div>
                 </>
