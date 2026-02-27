@@ -132,18 +132,18 @@ const Panel = () => {
         <div className="grid grid-cols-4 divide-x divide-primary-foreground/20">
           {recentCalled.length > 0
             ? recentCalled.map((t: any) => (
-                <div key={t.id} className="flex flex-col items-center justify-center py-4 px-2">
-                  <span className="text-3xl md:text-5xl font-black text-primary-foreground tracking-wider">
+                <div key={t.id} className="flex flex-col items-center justify-center py-6 px-2">
+                  <span className="text-5xl md:text-7xl font-black text-primary-foreground tracking-wider">
                     {t.display_number}
                   </span>
-                  <span className="text-sm md:text-lg font-medium text-primary-foreground/70 mt-1">
+                  <span className="text-lg md:text-xl font-semibold text-primary-foreground/70 mt-2">
                     {t.counters?.name || "Guichê"}
                   </span>
                 </div>
               ))
             : Array.from({ length: 4 }).map((_, i) => (
-                <div key={i} className="flex items-center justify-center py-4 px-2">
-                  <span className="text-2xl text-primary-foreground/30">—</span>
+                <div key={i} className="flex items-center justify-center py-6 px-2">
+                  <span className="text-3xl text-primary-foreground/30">—</span>
                 </div>
               ))}
         </div>
