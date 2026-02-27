@@ -32,8 +32,11 @@ const CounterPage = () => {
 
   // Sync currentTicket from realtime counter data
   useEffect(() => {
-    if (selectedCounter?.tickets) {
-      setCurrentTicket(selectedCounter.tickets);
+    const counterTicket = selectedCounter?.tickets;
+    // tickets comes as array from the join, or as object
+    const ticket = Array.isArray(counterTicket) ? counterTicket[0] : counterTicket;
+    if (ticket) {
+      setCurrentTicket(ticket);
     } else if (selectedCounter && !selectedCounter.current_ticket_id) {
       setCurrentTicket(null);
     }
