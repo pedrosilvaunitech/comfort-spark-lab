@@ -23,11 +23,12 @@ import { UserManagement } from "@/components/admin/UserManagement";
 import { CounterManagement } from "@/components/admin/CounterManagement";
 import { ServiceTypeManagement } from "@/components/admin/ServiceTypeManagement";
 import { Reports } from "@/components/admin/Reports";
+import { VoiceConfig } from "@/components/admin/VoiceConfig";
 import { toast } from "sonner";
 import { Link, Navigate } from "react-router-dom";
 import {
   Printer, Settings, FileText, History, RefreshCw, Save, TestTube,
-  LayoutTemplate, Users, Monitor, BarChart3, LogOut, Trash2,
+  LayoutTemplate, Users, Monitor, BarChart3, LogOut, Trash2, Volume2,
 } from "lucide-react";
 
 const Admin = () => {
@@ -122,12 +123,13 @@ const Admin = () => {
 
       <main className="container mx-auto p-6">
         <Tabs defaultValue="counters" className="space-y-6">
-          <TabsList className="grid w-full grid-cols-7">
+          <TabsList className="grid w-full grid-cols-8">
             <TabsTrigger value="counters" className="gap-1 text-xs"><Monitor className="h-3 w-3" /> Guichês</TabsTrigger>
             <TabsTrigger value="services" className="gap-1 text-xs"><FileText className="h-3 w-3" /> Serviços</TabsTrigger>
             <TabsTrigger value="users" className="gap-1 text-xs"><Users className="h-3 w-3" /> Usuários</TabsTrigger>
             <TabsTrigger value="printer" className="gap-1 text-xs"><Printer className="h-3 w-3" /> Impressora</TabsTrigger>
             <TabsTrigger value="layout" className="gap-1 text-xs"><LayoutTemplate className="h-3 w-3" /> Layout</TabsTrigger>
+            <TabsTrigger value="voice" className="gap-1 text-xs"><Volume2 className="h-3 w-3" /> Voz</TabsTrigger>
             <TabsTrigger value="reports" className="gap-1 text-xs"><BarChart3 className="h-3 w-3" /> Relatórios</TabsTrigger>
             <TabsTrigger value="logs" className="gap-1 text-xs"><History className="h-3 w-3" /> Logs</TabsTrigger>
           </TabsList>
@@ -135,6 +137,7 @@ const Admin = () => {
           <TabsContent value="counters"><CounterManagement /></TabsContent>
           <TabsContent value="services"><ServiceTypeManagement /></TabsContent>
           <TabsContent value="users"><UserManagement /></TabsContent>
+          <TabsContent value="voice"><VoiceConfig /></TabsContent>
           <TabsContent value="reports"><Reports /></TabsContent>
 
           {/* PRINTER CONFIG */}

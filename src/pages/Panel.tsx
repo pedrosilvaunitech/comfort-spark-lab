@@ -1,5 +1,22 @@
 import { useRealtimeTickets } from "@/hooks/use-realtime-tickets";
 import { useEffect, useRef, useState } from "react";
+import { getSystemConfig } from "@/lib/ticket-service";
+
+interface VoiceSettings {
+  template: string;
+  rate: number;
+  pitch: number;
+  beepEnabled: boolean;
+  repeatCount: number;
+}
+
+const defaultVoiceSettings: VoiceSettings = {
+  template: "Senha {senha}, dirija-se ao {guiche}",
+  rate: 0.9,
+  pitch: 1,
+  beepEnabled: true,
+  repeatCount: 1,
+};
 
 function parseTicketNumber(displayNumber: string): string {
   const prefix = displayNumber.replace(/[0-9]/g, "");
@@ -40,36 +57,58 @@ function playBeep(): Promise<void> {
   });
 }
 
-async function speakTicket(displayNumber: string, counterName: string) {
+async function speakTicket(displayNumber: string, counterName: string, settings: VoiceSettings) {
   const parsed = parseTicketNumber(displayNumber);
-  const text = `Senha ${parsed}, dirija-se ao ${counterName}`;
+  const text = settings.template
+    .replace("{senha}", parsed)
+    .replace("{guiche}", counterName);
 
   speechSynthesis.cancel();
-  await playBeep();
+  if (settings.beepEnabled) await playBeep();
 
-  const utterance = new SpeechSynthesisUtterance(text);
-  utterance.lang = "pt-BR";
-  utterance.rate = 0.9;
-  utterance.pitch = 1;
+  const speak = () => {
+    const utterance = new SpeechSynthesisUtterance(text);
+    utterance.lang = "pt-BR";
+    utterance.rate = settings.rate;
+    utterance.pitch = settings.pitch;
 
-  const voices = speechSynthesis.getVoices();
-  const googleVoice = voices.find(
-    (v) => v.lang.startsWith("pt") && v.name.toLowerCase().includes("google")
-  );
-  if (googleVoice) {
-    utterance.voice = googleVoice;
-  } else {
-    const ptVoice = voices.find((v) => v.lang.startsWith("pt-BR"));
-    if (ptVoice) utterance.voice = ptVoice;
+    const voices = speechSynthesis.getVoices();
+    const googleVoice = voices.find(
+      (v) => v.lang.startsWith("pt") && v.name.toLowerCase().includes("google")
+    );
+    if (googleVoice) {
+      utterance.voice = googleVoice;
+    } else {
+      const ptVoice = voices.find((v) => v.lang.startsWith("pt-BR"));
+      if (ptVoice) utterance.voice = ptVoice;
+    }
+    return utterance;
+  };
+
+  for (let i = 0; i < settings.repeatCount; i++) {
+    await new Promise<void>((resolve) => {
+      const u = speak();
+      u.onend = () => resolve();
+      u.onerror = () => resolve();
+      speechSynthesis.speak(u);
+    });
+    if (i < settings.repeatCount - 1) {
+      await new Promise((r) => setTimeout(r, 1000));
+    }
   }
-
-  speechSynthesis.speak(utterance);
 }
 
 const Panel = () => {
   const { calledTickets, lastCalled } = useRealtimeTickets();
   const lastCalledIdRef = useRef<string | null>(null);
   const [voicesLoaded, setVoicesLoaded] = useState(false);
+  const voiceSettingsRef = useRef<VoiceSettings>(defaultVoiceSettings);
+
+  useEffect(() => {
+    getSystemConfig("voice_settings").then((data) => {
+      if (data) voiceSettingsRef.current = data as unknown as VoiceSettings;
+    });
+  }, []);
 
   useEffect(() => {
     const loadVoices = () => {
@@ -85,7 +124,7 @@ const Panel = () => {
     if (lastCalled && lastCalled.id !== lastCalledIdRef.current) {
       lastCalledIdRef.current = lastCalled.id;
       const counterName = (lastCalled as any).counters?.name || "guichê";
-      speakTicket(lastCalled.display_number, counterName);
+      speakTicket(lastCalled.display_number, counterName, voiceSettingsRef.current);
     }
   }, [lastCalled, voicesLoaded]);
 

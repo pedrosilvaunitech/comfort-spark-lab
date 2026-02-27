@@ -14,7 +14,7 @@ import { printTicket } from "@/lib/print-service";
 import { useRealtimeTickets } from "@/hooks/use-realtime-tickets";
 import { useAuth } from "@/hooks/use-auth";
 import { supabase } from "@/integrations/supabase/client";
-import { CheckCircle, XCircle, Printer, SkipForward, LogOut, Volume2 } from "lucide-react";
+import { CheckCircle, XCircle, Printer, SkipForward, LogOut, Volume2, PhoneCall } from "lucide-react";
 import { toast } from "sonner";
 import { Link, Navigate, useLocation } from "react-router-dom";
 
@@ -95,6 +95,43 @@ const CounterPage = () => {
         toast.info("Nenhuma senha na fila");
         setCurrentTicket(null);
       }
+      refresh();
+    } catch (err: any) { toast.error(err.message); }
+    finally { setLoading(false); }
+  };
+
+  const handleCallSpecific = async (ticketId: string) => {
+    if (!selectedCounterId) { toast.error("Selecione um guichê primeiro"); return; }
+    setLoading(true);
+    try {
+      const { data: counter } = await supabase.from("counters").select("*").eq("id", selectedCounterId).single();
+      if (!counter) throw new Error("Guichê não encontrado");
+
+      // Complete current ticket if any
+      if (counter.current_ticket_id) {
+        await supabase.from("tickets")
+          .update({ status: "completed", completed_at: new Date().toISOString() })
+          .eq("id", counter.current_ticket_id);
+      }
+
+      // Call the specific ticket
+      const { data: updatedTicket, error } = await supabase.from("tickets")
+        .update({
+          status: "in_service",
+          counter_id: selectedCounterId,
+          called_at: new Date().toISOString(),
+          operator_id: user?.id || null,
+        })
+        .eq("id", ticketId)
+        .select()
+        .single();
+
+      if (error) throw error;
+
+      await supabase.from("counters").update({ current_ticket_id: ticketId }).eq("id", selectedCounterId);
+
+      setCurrentTicket(updatedTicket);
+      toast.success(`Senha ${updatedTicket.display_number} chamada!`);
       refresh();
     } catch (err: any) { toast.error(err.message); }
     finally { setLoading(false); }
@@ -210,7 +247,18 @@ const CounterPage = () => {
                       <span className="font-bold text-foreground">{t.display_number}</span>
                       <span className="text-sm text-muted-foreground">{t.service_types?.name}</span>
                     </div>
-                    <span className="text-xs text-muted-foreground">{new Date(t.created_at).toLocaleTimeString("pt-BR", { hour: "2-digit", minute: "2-digit" })}</span>
+                    <div className="flex items-center gap-2">
+                      <span className="text-xs text-muted-foreground">{new Date(t.created_at).toLocaleTimeString("pt-BR", { hour: "2-digit", minute: "2-digit" })}</span>
+                      <Button
+                        size="sm"
+                        variant="ghost"
+                        disabled={loading || !selectedCounterId}
+                        onClick={() => handleCallSpecific(t.id)}
+                        title="Chamar esta senha"
+                      >
+                        <PhoneCall className="h-3.5 w-3.5" />
+                      </Button>
+                    </div>
                   </div>
                 ))}
                 {waitingTickets.length === 0 && <p className="text-sm text-muted-foreground text-center py-8">Fila vazia</p>}
