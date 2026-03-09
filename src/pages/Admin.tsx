@@ -31,7 +31,7 @@ import { toast } from "sonner";
 import { Link, Navigate } from "react-router-dom";
 import {
   Printer, Settings, FileText, History, RefreshCw, Save, TestTube,
-  LayoutTemplate, Users, Monitor, BarChart3, LogOut, Trash2, Volume2, ListOrdered, Tablet,
+  LayoutTemplate, Users, Monitor, BarChart3, LogOut, Trash2, Volume2, ListOrdered, Tablet, Palette,
 } from "lucide-react";
 
 const Admin = () => {
