@@ -378,9 +378,9 @@ export function VoiceConfig() {
           <div className="bg-muted rounded-lg p-4">
             <p className="text-sm font-medium mb-1">Exemplos de como soa:</p>
             <ul className="text-sm space-y-1 text-muted-foreground">
-              <li>N0001 → "{formatTicketForSpeech("N0001", settings)}"</li>
-              <li>E0015 → "{formatTicketForSpeech("E0015", settings)}"</li>
-              <li>P1002 → "{formatTicketForSpeech("P1002", settings)}"</li>
+              <li>N0001 → "{getPreviewTextFull("N0001")}"</li>
+              <li>E0015 → "{getPreviewTextFull("E0015")}"</li>
+              <li>P1002 → "{getPreviewTextFull("P1002")}"</li>
             </ul>
           </div>
           <Button onClick={handleTestVoice} variant="outline" className="w-full">
