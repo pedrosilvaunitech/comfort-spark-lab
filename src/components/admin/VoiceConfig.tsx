@@ -120,10 +120,29 @@ export function VoiceConfig() {
     }
   };
 
+  const getPreviewText = () => {
+    const spokenPart = formatTicketForSpeech("N0001", settings);
+    return settings.template
+      .replace("{prefixo}", "")
+      .replace("{senha}", spokenPart)
+      .replace("{guiche}", "Guichê 1")
+      .replace(/\s+/g, " ")
+      .trim();
+  };
+
+  const getPreviewTextFull = () => {
+    const spokenPart = formatTicketForSpeech("N0001", settings);
+    return settings.template
+      .replace("{prefixo} {senha}", spokenPart)
+      .replace("{prefixo}", "")
+      .replace("{senha}", spokenPart)
+      .replace("{guiche}", "Guichê 1")
+      .replace(/\s+/g, " ")
+      .trim();
+  };
+
   const handleTestVoice = () => {
-    const text = settings.template
-      .replace("{senha}", "N 1")
-      .replace("{guiche}", "Guichê 1");
+    const text = getPreviewTextFull();
 
     speechSynthesis.cancel();
     const utterance = new SpeechSynthesisUtterance(text);
