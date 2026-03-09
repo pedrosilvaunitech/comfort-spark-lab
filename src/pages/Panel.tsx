@@ -62,10 +62,10 @@ function findVoice(settings: VoiceSettings): SpeechSynthesisVoice | null {
 }
 
 async function speakTicket(displayNumber: string, counterName: string, settings: VoiceSettings) {
-  const spokenNumber = formatTicketForSpeech(displayNumber, settings);
+  const spokenPrefix = formatPrefixForSpeech(settings);
+  const spokenNumber = formatNumberForSpeech(displayNumber, settings);
   const text = settings.template
-    .replace("{prefixo} {senha}", spokenNumber)
-    .replace("{prefixo}", "")
+    .replace("{prefixo}", spokenPrefix)
     .replace("{senha}", spokenNumber)
     .replace("{guiche}", counterName)
     .replace(/\s+/g, " ")
