@@ -61,10 +61,10 @@ export function QueueManagement() {
       // Update ticket to called status with custom voice text
       const { error } = await supabase.from("tickets")
         .update({
-          status: "called",
+          status: "called" as any,
           called_at: new Date().toISOString(),
           custom_voice_text: customVoiceText || null,
-        })
+        } as any)
         .eq("id", selectedTicket.id);
 
       if (error) throw error;
