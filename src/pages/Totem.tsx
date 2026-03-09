@@ -9,6 +9,7 @@ import { supabase } from "@/integrations/supabase/client";
 import type { ServiceType, Ticket } from "@/lib/ticket-service";
 import { Printer, User, FileText, Heart, ArrowLeft } from "lucide-react";
 import { useScreenConfig } from "@/hooks/use-screen-config";
+import { useKioskMode } from "@/lib/kiosk-mode";
 
 type Step = "select_type" | "optional_info" | "ticket_generated";
 
