@@ -88,7 +88,7 @@ export function Reports() {
       page++;
     }
 
-    const all = tickets || [];
+    
 
     // Basic stats
     setStats({
