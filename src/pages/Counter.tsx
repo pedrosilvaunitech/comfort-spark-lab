@@ -28,6 +28,7 @@ const CounterPage = () => {
   const [currentTicket, setCurrentTicket] = useState<any>(null);
   const [loading, setLoading] = useState(false);
   const { counters, waitingTickets, calledTickets, refresh } = useRealtimeTickets();
+  const { config: screenConfig } = useScreenConfig();
 
   const selectedCounter = counters.find((c: any) => c.id === selectedCounterId);
 
