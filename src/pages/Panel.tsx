@@ -1,24 +1,7 @@
 import { useRealtimeTickets } from "@/hooks/use-realtime-tickets";
 import { useEffect, useRef, useState } from "react";
 import { getSystemConfig } from "@/lib/ticket-service";
-
-interface VoiceSettings {
-  template: string;
-  rate: number;
-  pitch: number;
-  beepEnabled: boolean;
-  repeatCount: number;
-  voiceName: string;
-}
-
-const defaultVoiceSettings: VoiceSettings = {
-  template: "Senha {senha}, dirija-se ao {guiche}",
-  rate: 0.9,
-  pitch: 1,
-  beepEnabled: true,
-  repeatCount: 1,
-  voiceName: "",
-};
+import { type VoiceSettings, defaultVoiceSettings, formatTicketForSpeech } from "@/components/admin/VoiceConfig";
 
 function parseTicketNumber(displayNumber: string): string {
   const prefix = displayNumber.replace(/[0-9]/g, "");
@@ -79,10 +62,14 @@ function findVoice(settings: VoiceSettings): SpeechSynthesisVoice | null {
 }
 
 async function speakTicket(displayNumber: string, counterName: string, settings: VoiceSettings) {
-  const parsed = parseTicketNumber(displayNumber);
+  const spokenNumber = formatTicketForSpeech(displayNumber, settings);
   const text = settings.template
-    .replace("{senha}", parsed)
-    .replace("{guiche}", counterName);
+    .replace("{prefixo} {senha}", spokenNumber)
+    .replace("{prefixo}", "")
+    .replace("{senha}", spokenNumber)
+    .replace("{guiche}", counterName)
+    .replace(/\s+/g, " ")
+    .trim();
 
   speechSynthesis.cancel();
   if (settings.beepEnabled) await playBeep();

@@ -6,6 +6,7 @@ import { Button } from "@/components/ui/button";
 import { Slider } from "@/components/ui/slider";
 import { Switch } from "@/components/ui/switch";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
+import { RadioGroup, RadioGroupItem } from "@/components/ui/radio-group";
 import { Save, Volume2, RefreshCw } from "lucide-react";
 import { getSystemConfig, updateSystemConfig } from "@/lib/ticket-service";
 import { supabase } from "@/integrations/supabase/client";
@@ -17,17 +18,63 @@ export interface VoiceSettings {
   pitch: number;
   beepEnabled: boolean;
   repeatCount: number;
-  voiceName: string; // selected voice name
+  voiceName: string;
+  numberFormat: "full" | "no_zeros" | "digit_by_digit";
+  // e.g. "full" = "0001", "no_zeros" = "1", "digit_by_digit" = "0 0 0 1"
+  prefixFormat: "senha" | "numero" | "senha_numero" | "custom";
+  customPrefix: string;
 }
 
-const defaultVoiceSettings: VoiceSettings = {
-  template: "Senha {senha}, dirija-se ao {guiche}",
+export const defaultVoiceSettings: VoiceSettings = {
+  template: "{prefixo} {senha}, dirija-se ao {guiche}",
   rate: 0.9,
   pitch: 1,
   beepEnabled: true,
   repeatCount: 1,
   voiceName: "",
+  numberFormat: "no_zeros",
+  prefixFormat: "senha",
+  customPrefix: "",
 };
+
+export function formatTicketForSpeech(displayNumber: string, settings: VoiceSettings): string {
+  const prefix = displayNumber.replace(/[0-9]/g, "").trim();
+  const numStr = displayNumber.replace(/[^0-9]/g, "");
+  const num = parseInt(numStr, 10);
+
+  let spokenNumber: string;
+  switch (settings.numberFormat) {
+    case "full":
+      spokenNumber = numStr; // "0001"
+      break;
+    case "digit_by_digit":
+      spokenNumber = numStr.split("").join(" "); // "0 0 0 1"
+      break;
+    case "no_zeros":
+    default:
+      spokenNumber = String(num); // "1"
+      break;
+  }
+
+  let spokenPrefix: string;
+  switch (settings.prefixFormat) {
+    case "numero":
+      spokenPrefix = `${prefix} número`;
+      break;
+    case "senha_numero":
+      spokenPrefix = `Senha número ${prefix}`;
+      break;
+    case "custom":
+      spokenPrefix = settings.customPrefix || prefix;
+      break;
+    case "senha":
+    default:
+      spokenPrefix = `Senha ${prefix}`;
+      break;
+  }
+
+  return `${spokenPrefix} ${spokenNumber}`;
+}
 
 export function VoiceConfig() {
   const [settings, setSettings] = useState<VoiceSettings>(defaultVoiceSettings);
@@ -73,10 +120,29 @@ export function VoiceConfig() {
     }
   };
 
+  const getPreviewText = () => {
+    const spokenPart = formatTicketForSpeech("N0001", settings);
+    return settings.template
+      .replace("{prefixo}", "")
+      .replace("{senha}", spokenPart)
+      .replace("{guiche}", "Guichê 1")
+      .replace(/\s+/g, " ")
+      .trim();
+  };
+
+  const getPreviewTextFull = () => {
+    const spokenPart = formatTicketForSpeech("N0001", settings);
+    return settings.template
+      .replace("{prefixo} {senha}", spokenPart)
+      .replace("{prefixo}", "")
+      .replace("{senha}", spokenPart)
+      .replace("{guiche}", "Guichê 1")
+      .replace(/\s+/g, " ")
+      .trim();
+  };
+
   const handleTestVoice = () => {
-    const text = settings.template
-      .replace("{senha}", "N 1")
-      .replace("{guiche}", "Guichê 1");
+    const text = getPreviewTextFull();
 
     speechSynthesis.cancel();
     const utterance = new SpeechSynthesisUtterance(text);
@@ -119,12 +185,68 @@ export function VoiceConfig() {
             <Input
               value={settings.template}
               onChange={(e) => setSettings({ ...settings, template: e.target.value })}
-              placeholder="Senha {senha}, dirija-se ao {guiche}"
+              placeholder="{prefixo} {senha}, dirija-se ao {guiche}"
             />
             <p className="text-xs text-muted-foreground mt-1">
-              Use <code className="bg-muted px-1 rounded">{"{senha}"}</code> para o número e{" "}
-              <code className="bg-muted px-1 rounded">{"{guiche}"}</code> para o nome do guichê.
+              Use <code className="bg-muted px-1 rounded">{"{prefixo}"}</code> + <code className="bg-muted px-1 rounded">{"{senha}"}</code> para a chamada e{" "}
+              <code className="bg-muted px-1 rounded">{"{guiche}"}</code> para o guichê. Ou use <code className="bg-muted px-1 rounded">{"{prefixo} {senha}"}</code> juntos.
             </p>
+          </div>
+
+          <div>
+            <Label className="mb-2 block">Como chamar o prefixo</Label>
+            <RadioGroup
+              value={settings.prefixFormat}
+              onValueChange={(v) => setSettings({ ...settings, prefixFormat: v as VoiceSettings["prefixFormat"] })}
+              className="space-y-2"
+            >
+              <div className="flex items-center gap-2">
+                <RadioGroupItem value="senha" id="pf-senha" />
+                <Label htmlFor="pf-senha" className="font-normal">Senha N 1 → <span className="text-muted-foreground">"Senha N 1"</span></Label>
+              </div>
+              <div className="flex items-center gap-2">
+                <RadioGroupItem value="numero" id="pf-numero" />
+                <Label htmlFor="pf-numero" className="font-normal">N número 1 → <span className="text-muted-foreground">"N número 1"</span></Label>
+              </div>
+              <div className="flex items-center gap-2">
+                <RadioGroupItem value="senha_numero" id="pf-senha-numero" />
+                <Label htmlFor="pf-senha-numero" className="font-normal">Senha número N 1 → <span className="text-muted-foreground">"Senha número N 1"</span></Label>
+              </div>
+              <div className="flex items-center gap-2">
+                <RadioGroupItem value="custom" id="pf-custom" />
+                <Label htmlFor="pf-custom" className="font-normal">Personalizado</Label>
+              </div>
+            </RadioGroup>
+            {settings.prefixFormat === "custom" && (
+              <Input
+                className="mt-2"
+                value={settings.customPrefix}
+                onChange={(e) => setSettings({ ...settings, customPrefix: e.target.value })}
+                placeholder="Ex: Senha número"
+              />
+            )}
+          </div>
+
+          <div>
+            <Label className="mb-2 block">Formato do número</Label>
+            <RadioGroup
+              value={settings.numberFormat}
+              onValueChange={(v) => setSettings({ ...settings, numberFormat: v as VoiceSettings["numberFormat"] })}
+              className="space-y-2"
+            >
+              <div className="flex items-center gap-2">
+                <RadioGroupItem value="no_zeros" id="nf-no-zeros" />
+                <Label htmlFor="nf-no-zeros" className="font-normal">Sem zeros → 0001 fala <span className="text-muted-foreground">"1"</span></Label>
+              </div>
+              <div className="flex items-center gap-2">
+                <RadioGroupItem value="full" id="nf-full" />
+                <Label htmlFor="nf-full" className="font-normal">Número completo → 1002 fala <span className="text-muted-foreground">"1002"</span></Label>
+              </div>
+              <div className="flex items-center gap-2">
+                <RadioGroupItem value="digit_by_digit" id="nf-digit" />
+                <Label htmlFor="nf-digit" className="font-normal">Dígito por dígito → 1002 fala <span className="text-muted-foreground">"1 0 0 2"</span></Label>
+              </div>
+            </RadioGroup>
           </div>
 
           <div>
@@ -237,9 +359,7 @@ export function VoiceConfig() {
           <div className="bg-muted rounded-lg p-4">
             <p className="text-sm font-medium mb-1">Frase que será dita:</p>
             <p className="text-lg font-mono">
-              {settings.template
-                .replace("{senha}", "N 1")
-                .replace("{guiche}", "Guichê 1")}
+              {getPreviewTextFull()}
             </p>
           </div>
           <div className="bg-muted rounded-lg p-4">
@@ -247,6 +367,14 @@ export function VoiceConfig() {
             <p className="text-sm">
               {settings.voiceName || "Automático (melhor pt-BR)"}
             </p>
+          </div>
+          <div className="bg-muted rounded-lg p-4">
+            <p className="text-sm font-medium mb-1">Exemplos de como soa:</p>
+            <ul className="text-sm space-y-1 text-muted-foreground">
+              <li>N0001 → "{formatTicketForSpeech("N0001", settings)}"</li>
+              <li>E0015 → "{formatTicketForSpeech("E0015", settings)}"</li>
+              <li>P1002 → "{formatTicketForSpeech("P1002", settings)}"</li>
+            </ul>
           </div>
           <Button onClick={handleTestVoice} variant="outline" className="w-full">
             <Volume2 className="h-4 w-4 mr-2" />
