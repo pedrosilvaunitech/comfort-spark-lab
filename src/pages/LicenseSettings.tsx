@@ -86,25 +86,40 @@ const LicenseSettings = () => {
               <div className="space-y-4">
                 <div className="flex items-center gap-2">
                   <Building2 className="h-4 w-4 text-muted-foreground" />
-                  <span className="text-sm font-medium">{displayLicense.company_name || '—'}</span>
+                  <span className="text-sm font-medium">{displayLicense.company_name || displayLicense.companyName || displayLicense.name || '—'}</span>
                 </div>
                 <div className="flex items-center gap-2">
                   <Shield className="h-4 w-4 text-muted-foreground" />
-                  <span className="text-sm">CNPJ: {displayLicense.cnpj || '—'}</span>
+                  <span className="text-sm">CNPJ: {displayLicense.cnpj || displayLicense.document || '—'}</span>
                 </div>
                 <div className="flex items-center gap-2">
                   <Calendar className="h-4 w-4 text-muted-foreground" />
-                  <span className="text-sm">Validade: {displayLicense.expires_at ? new Date(displayLicense.expires_at).toLocaleDateString('pt-BR') : '—'}</span>
+                  <span className="text-sm">Validade: {
+                    (displayLicense.expires_at || displayLicense.expiresAt || displayLicense.expiry_date || displayLicense.valid_until)
+                      ? new Date(displayLicense.expires_at || displayLicense.expiresAt || displayLicense.expiry_date || displayLicense.valid_until).toLocaleDateString('pt-BR')
+                      : '—'
+                  }</span>
                 </div>
                 <div className="flex items-center gap-2">
                   <span className="text-sm">Status:</span>
                   <Badge variant={displayLicense.status === 'active' ? 'default' : 'destructive'}>
-                    {displayLicense.status === 'active' ? 'Ativa' : displayLicense.status === 'expired' ? 'Expirada' : displayLicense.status}
+                    {displayLicense.status === 'active' ? 'Ativa' : displayLicense.status === 'expired' ? 'Expirada' : displayLicense.status === 'suspended' ? 'Suspensa' : displayLicense.status || '—'}
                   </Badge>
                 </div>
-                {displayLicense.days_remaining != null && (
-                  <p className="text-sm text-muted-foreground">{displayLicense.days_remaining} dias restantes</p>
+                {(displayLicense.days_remaining != null || displayLicense.daysRemaining != null) && (
+                  <p className="text-sm text-muted-foreground">{displayLicense.days_remaining ?? displayLicense.daysRemaining} dias restantes</p>
                 )}
+                {displayLicense.plan && <p className="text-sm text-muted-foreground">Plano: {displayLicense.plan}</p>}
+
+                {/* Debug: show raw response for troubleshooting */}
+                <details className="mt-4">
+                  <summary className="text-xs text-muted-foreground cursor-pointer">Ver dados brutos</summary>
+                  <pre className="text-[10px] bg-muted rounded p-2 mt-1 overflow-auto max-h-40">{JSON.stringify(displayLicense, null, 2)}</pre>
+                </details>
+
+                <div className="border-t border-border pt-3 mt-3">
+                  <Link to="/financeiro"><Button variant="outline" className="w-full"><DollarSign className="h-4 w-4 mr-2" /> Ver Pagamentos / Financeiro</Button></Link>
+                </div>
               </div>
             ) : (
               <p className="text-muted-foreground text-sm">Configure e teste a conexão para ver o status</p>
