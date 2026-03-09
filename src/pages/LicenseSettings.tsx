@@ -4,7 +4,7 @@ import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Badge } from "@/components/ui/badge";
-import { getStoredConfig, saveConfigLocal, saveKeysToServer, type LicenseConfig } from "@/services/licenseApi";
+import { getConfigFromServer, saveKeysToServer, type LicenseConfig } from "@/services/licenseApi";
 import { useLicense } from "@/contexts/LicenseContext";
 import { useAuth } from "@/hooks/use-auth";
 import { Navigate, Link } from "react-router-dom";
@@ -19,15 +19,16 @@ const LicenseSettings = () => {
   const [saving, setSaving] = useState(false);
   const [testResult, setTestResult] = useState<any>(null);
 
-  useEffect(() => { setConfig(getStoredConfig()); }, []);
+  useEffect(() => {
+    getConfigFromServer().then(cfg => {
+      setConfig(prev => ({ ...prev, toleranciaDiasAtraso: cfg.tolerancia_dias }));
+    });
+  }, []);
 
   const handleSave = async () => {
     setSaving(true);
     try {
-      // Save tolerance locally
-      saveConfigLocal(config);
-      // Save keys to server (secure)
-      const result = await saveKeysToServer(config.apiKey, config.activationKey);
+      const result = await saveKeysToServer(config.apiKey, config.activationKey, config.toleranciaDiasAtraso);
       if (result.license) setTestResult(result.license);
       toast.success("Configuração salva com segurança!");
       checkLicense();
@@ -40,9 +41,7 @@ const LicenseSettings = () => {
     setTesting(true);
     setTestResult(null);
     try {
-      // Save keys first then test via proxy
-      const result = await saveKeysToServer(config.apiKey, config.activationKey);
-      saveConfigLocal(config);
+      const result = await saveKeysToServer(config.apiKey, config.activationKey, config.toleranciaDiasAtraso);
       if (result.license) {
         setTestResult(result.license);
         toast.success("Conexão OK!");

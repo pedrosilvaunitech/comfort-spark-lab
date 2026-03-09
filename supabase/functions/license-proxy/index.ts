@@ -41,20 +41,26 @@ serve(async (req) => {
     const supabaseKey = Deno.env.get('SUPABASE_SERVICE_ROLE_KEY')!;
     const supabaseClient = createClient(supabaseUrl, supabaseKey);
 
-    // For save_keys, skip reading existing keys
+    // Save full config (keys + tolerance)
     if (action === 'save_keys') {
-      const { new_api_key, new_activation_key } = body;
+      const { new_api_key, new_activation_key, tolerancia_dias } = body;
       if (!new_api_key || !new_activation_key) {
         return new Response(JSON.stringify({ error: 'Chaves obrigatórias' }), {
           status: 400, headers: { ...corsHeaders, 'Content-Type': 'application/json' },
         });
       }
 
+      const configValue = {
+        api_key: new_api_key,
+        activation_key: new_activation_key,
+        tolerancia_dias: tolerancia_dias ?? 5,
+      };
+
       const { error: upsertError } = await supabaseClient
         .from('system_config')
         .upsert({
           key: 'license_keys',
-          value: { api_key: new_api_key, activation_key: new_activation_key },
+          value: configValue,
           updated_at: new Date().toISOString(),
         }, { onConflict: 'key' });
 
@@ -79,6 +85,36 @@ serve(async (req) => {
         });
       } catch {
         return new Response(JSON.stringify({ success: true, warning: 'Chaves salvas mas teste falhou' }), {
+          headers: { ...corsHeaders, 'Content-Type': 'application/json' },
+        });
+      }
+    }
+
+    // Get config from DB
+    if (action === 'get_config') {
+      try {
+        const { data, error } = await supabaseClient
+          .from('system_config')
+          .select('value')
+          .eq('key', 'license_keys')
+          .single();
+
+        if (error || !data) {
+          return new Response(JSON.stringify({ configured: false, tolerancia_dias: 5 }), {
+            headers: { ...corsHeaders, 'Content-Type': 'application/json' },
+          });
+        }
+
+        const val = data.value as any;
+        return new Response(JSON.stringify({
+          configured: !!(val?.api_key && val?.activation_key),
+          tolerancia_dias: val?.tolerancia_dias ?? 5,
+          has_keys: !!(val?.api_key && val?.activation_key),
+        }), {
+          headers: { ...corsHeaders, 'Content-Type': 'application/json' },
+        });
+      } catch {
+        return new Response(JSON.stringify({ configured: false, tolerancia_dias: 5 }), {
           headers: { ...corsHeaders, 'Content-Type': 'application/json' },
         });
       }

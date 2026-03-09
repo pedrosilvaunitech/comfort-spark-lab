@@ -1,5 +1,5 @@
 import React, { createContext, useContext, useState, useEffect, useCallback } from "react";
-import { getLicense, getPayments, getPixImage, getBoletoPdf, getStoredConfig } from "@/services/licenseApi";
+import { getLicense, getPayments, getPixImage, getBoletoPdf, getConfigFromServer } from "@/services/licenseApi";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import { AlertTriangle, RefreshCw, QrCode, FileText, Copy, Check, Key } from "lucide-react";
@@ -52,11 +52,20 @@ export function LicenseProvider({ children }: { children: React.ReactNode }) {
   const navigate = useNavigate();
 
   const checkLicense = useCallback(async () => {
-    const config = getStoredConfig();
-    setDiasTolerancia(config.toleranciaDiasAtraso);
     setChecking(true);
 
     try {
+      // Get config from DB
+      const serverConfig = await getConfigFromServer();
+      setDiasTolerancia(serverConfig.tolerancia_dias);
+      setIsConfigured(serverConfig.configured);
+
+      if (!serverConfig.configured) {
+        setIsConfigured(false);
+        setIsBlocked(false);
+        return;
+      }
+
       const [licRes, payRes] = await Promise.all([
         getLicense(),
         getPayments(),
@@ -75,7 +84,7 @@ export function LicenseProvider({ children }: { children: React.ReactNode }) {
         if (p.status !== 'overdue') return false;
         const due = new Date(p.due_date);
         const diffDays = Math.floor((now.getTime() - due.getTime()) / (1000 * 60 * 60 * 24));
-        return diffDays > config.toleranciaDiasAtraso;
+        return diffDays > serverConfig.tolerancia_dias;
       });
 
       setOverduePayments(overdue);
@@ -90,7 +99,7 @@ export function LicenseProvider({ children }: { children: React.ReactNode }) {
         setBlockReason('Sua licença está suspensa');
       } else if (isInadimplente) {
         setIsBlocked(true);
-        setBlockReason(`Sistema bloqueado por inadimplência. Pagamentos vencidos há mais de ${config.toleranciaDiasAtraso} dias. Regularize para continuar.`);
+        setBlockReason(`Sistema bloqueado por inadimplência. Pagamentos vencidos há mais de ${serverConfig.tolerancia_dias} dias. Regularize para continuar.`);
       } else {
         setIsBlocked(false);
         setBlockReason('');
