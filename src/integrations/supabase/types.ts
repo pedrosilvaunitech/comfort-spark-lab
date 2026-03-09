@@ -194,6 +194,7 @@ export type Database = {
           completed_at: string | null
           counter_id: string | null
           created_at: string
+          custom_voice_text: string | null
           display_number: string
           id: string
           operator_id: string | null
@@ -210,6 +211,7 @@ export type Database = {
           completed_at?: string | null
           counter_id?: string | null
           created_at?: string
+          custom_voice_text?: string | null
           display_number: string
           id?: string
           operator_id?: string | null
@@ -226,6 +228,7 @@ export type Database = {
           completed_at?: string | null
           counter_id?: string | null
           created_at?: string
+          custom_voice_text?: string | null
           display_number?: string
           id?: string
           operator_id?: string | null

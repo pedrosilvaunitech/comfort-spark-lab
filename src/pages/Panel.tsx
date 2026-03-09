@@ -127,7 +127,32 @@ const Panel = () => {
     if (lastCalled && lastCalled.id !== lastCalledIdRef.current) {
       lastCalledIdRef.current = lastCalled.id;
       const counterName = (lastCalled as any).counters?.name || "guichê";
-      speakTicket(lastCalled.display_number, counterName, voiceSettingsRef.current);
+      const customText = (lastCalled as any).custom_voice_text;
+      if (customText) {
+        // Use custom voice text directly
+        speechSynthesis.cancel();
+        const settings = voiceSettingsRef.current;
+        const doSpeak = async () => {
+          if (settings.beepEnabled) await playBeep();
+          for (let i = 0; i < settings.repeatCount; i++) {
+            await new Promise<void>((resolve) => {
+              const u = new SpeechSynthesisUtterance(customText);
+              u.lang = "pt-BR";
+              u.rate = settings.rate;
+              u.pitch = settings.pitch;
+              const voice = findVoice(settings);
+              if (voice) u.voice = voice;
+              u.onend = () => resolve();
+              u.onerror = () => resolve();
+              speechSynthesis.speak(u);
+            });
+            if (i < settings.repeatCount - 1) await new Promise((r) => setTimeout(r, 1000));
+          }
+        };
+        doSpeak();
+      } else {
+        speakTicket(lastCalled.display_number, counterName, voiceSettingsRef.current);
+      }
     }
   }, [lastCalled, voicesLoaded]);
 
