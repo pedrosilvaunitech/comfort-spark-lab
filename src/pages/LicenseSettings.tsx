@@ -111,11 +111,6 @@ const LicenseSettings = () => {
                 )}
                 {displayLicense.plan && <p className="text-sm text-muted-foreground">Plano: {displayLicense.plan}</p>}
 
-                {/* Debug: show raw response for troubleshooting */}
-                <details className="mt-4">
-                  <summary className="text-xs text-muted-foreground cursor-pointer">Ver dados brutos</summary>
-                  <pre className="text-[10px] bg-muted rounded p-2 mt-1 overflow-auto max-h-40">{JSON.stringify(displayLicense, null, 2)}</pre>
-                </details>
 
                 <div className="border-t border-border pt-3 mt-3">
                   <Link to="/financeiro"><Button variant="outline" className="w-full"><DollarSign className="h-4 w-4 mr-2" /> Ver Pagamentos / Financeiro</Button></Link>
