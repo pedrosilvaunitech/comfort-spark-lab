@@ -51,6 +51,11 @@ const Financeiro = () => {
       toast.error("Licença não configurada");
       return;
     }
+    if (!paymentId || paymentId.startsWith('unknown')) {
+      toast.error("ID do pagamento não encontrado. Verifique os dados da API.");
+      console.error('[Financeiro] Payment ID inválido. Payments disponíveis:', JSON.stringify(payments.slice(0, 2)));
+      return;
+    }
     try {
       console.log('[Financeiro] Gerando boleto para payment:', paymentId);
       const url = await getBoletoPdf(paymentId, config.activationKey);
