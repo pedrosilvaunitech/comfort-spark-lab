@@ -96,6 +96,11 @@ export function LicenseProvider({ children }: { children: React.ReactNode }) {
       }
     } catch (err: any) {
       console.error('[License] check failed:', err);
+      // If keys not configured, mark as not configured
+      if (err.message?.includes('não configurada') || err.message?.includes('incompletas')) {
+        setIsConfigured(false);
+        setIsBlocked(false);
+      }
     } finally {
       setChecking(false);
     }
