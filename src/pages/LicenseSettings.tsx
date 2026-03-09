@@ -4,7 +4,7 @@ import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Badge } from "@/components/ui/badge";
-import { getStoredConfig, saveConfigLocal, saveKeysToServer, type LicenseConfig } from "@/services/licenseApi";
+import { getConfigFromServer, saveKeysToServer, type LicenseConfig } from "@/services/licenseApi";
 import { useLicense } from "@/contexts/LicenseContext";
 import { useAuth } from "@/hooks/use-auth";
 import { Navigate, Link } from "react-router-dom";
