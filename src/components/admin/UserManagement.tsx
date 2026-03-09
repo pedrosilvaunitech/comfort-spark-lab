@@ -29,7 +29,7 @@ export function UserManagement() {
   const [editingUser, setEditingUser] = useState<UserWithRole | null>(null);
   const [editName, setEditName] = useState("");
   const [editEmail, setEditEmail] = useState("");
-  const [editRole, setEditRole] = useState<"admin" | | "gestor" "operator">("operator");
+  const [editRole, setEditRole] = useState<"admin" | "operator" | "gestor">("operator");
   const [editPassword, setEditPassword] = useState("");
   const [editOpen, setEditOpen] = useState(false);
   const [saving, setSaving] = useState(false);
