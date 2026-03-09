@@ -23,6 +23,7 @@ export interface VoiceSettings {
   // e.g. "full" = "0001", "no_zeros" = "1", "digit_by_digit" = "0 0 0 1"
   prefixFormat: "senha" | "numero" | "senha_numero" | "custom";
   customPrefix: string;
+  speakPrefix: boolean;
 }
 
 export const defaultVoiceSettings: VoiceSettings = {
