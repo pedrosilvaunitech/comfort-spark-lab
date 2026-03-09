@@ -23,6 +23,7 @@ export interface VoiceSettings {
   // e.g. "full" = "0001", "no_zeros" = "1", "digit_by_digit" = "0 0 0 1"
   prefixFormat: "senha" | "numero" | "senha_numero" | "custom";
   customPrefix: string;
+  speakPrefix: boolean;
 }
 
 export const defaultVoiceSettings: VoiceSettings = {
@@ -35,6 +36,7 @@ export const defaultVoiceSettings: VoiceSettings = {
   numberFormat: "no_zeros",
   prefixFormat: "senha",
   customPrefix: "",
+  speakPrefix: true,
 };
 
 export function formatTicketForSpeech(displayNumber: string, settings: VoiceSettings): string {
@@ -56,20 +58,22 @@ export function formatTicketForSpeech(displayNumber: string, settings: VoiceSett
       break;
   }
 
+  const letterPrefix = settings.speakPrefix ? prefix : "";
+
   let spokenPrefix: string;
   switch (settings.prefixFormat) {
     case "numero":
-      spokenPrefix = `${prefix} número`;
+      spokenPrefix = letterPrefix ? `${letterPrefix} número` : "número";
       break;
     case "senha_numero":
-      spokenPrefix = `Senha número ${prefix}`;
+      spokenPrefix = letterPrefix ? `Senha número ${letterPrefix}` : "Senha número";
       break;
     case "custom":
-      spokenPrefix = settings.customPrefix || prefix;
+      spokenPrefix = settings.customPrefix || letterPrefix;
       break;
     case "senha":
     default:
-      spokenPrefix = `Senha ${prefix}`;
+      spokenPrefix = letterPrefix ? `Senha ${letterPrefix}` : "Senha";
       break;
   }
 
@@ -225,6 +229,17 @@ export function VoiceConfig() {
                 placeholder="Ex: Senha número"
               />
             )}
+          </div>
+
+          <div className="flex items-center justify-between">
+            <div>
+              <Label>Falar a letra do prefixo (N, E, P...)</Label>
+              <p className="text-xs text-muted-foreground">Se desativado, fala apenas o número sem a letra identificadora</p>
+            </div>
+            <Switch
+              checked={settings.speakPrefix}
+              onCheckedChange={(v) => setSettings({ ...settings, speakPrefix: v })}
+            />
           </div>
 
           <div>
