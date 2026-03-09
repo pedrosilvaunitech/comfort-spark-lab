@@ -143,7 +143,8 @@ const Financeiro = () => {
                 </tr></thead>
                 <tbody>
                   {payments.map((p: any, idx: number) => {
-                    const paymentId = p.id || p.payment_id || p.paymentId || `unknown-${idx}`;
+                    const paymentId = p.id || p.payment_id || p.paymentId || p.charge_id || p.chargeId || `unknown-${idx}`;
+                    console.log(`[Financeiro] Payment ${idx}:`, JSON.stringify(p));
                     return (
                     <tr key={paymentId} className="border-b border-border">
                       <td className="p-2">{p.reference_period || p.description || '—'}</td>
