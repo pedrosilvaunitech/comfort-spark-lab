@@ -39,7 +39,7 @@ export const defaultVoiceSettings: VoiceSettings = {
   speakPrefix: true,
 };
 
-export function formatTicketForSpeech(displayNumber: string, settings: VoiceSettings): string {
+export function formatNumberForSpeech(displayNumber: string, settings: VoiceSettings): string {
   const prefix = displayNumber.replace(/[0-9]/g, "").trim();
   const numStr = displayNumber.replace(/[^0-9]/g, "");
   const num = parseInt(numStr, 10);
@@ -47,37 +47,40 @@ export function formatTicketForSpeech(displayNumber: string, settings: VoiceSett
   let spokenNumber: string;
   switch (settings.numberFormat) {
     case "full":
-      spokenNumber = numStr; // "0001"
+      spokenNumber = numStr;
       break;
     case "digit_by_digit":
-      spokenNumber = numStr.split("").join(" "); // "0 0 0 1"
+      spokenNumber = numStr.split("").join(" ");
       break;
     case "no_zeros":
     default:
-      spokenNumber = String(num); // "1"
+      spokenNumber = String(num);
       break;
   }
 
   const letterPrefix = settings.speakPrefix ? prefix : "";
+  return letterPrefix ? `${letterPrefix} ${spokenNumber}` : spokenNumber;
+}
 
-  let spokenPrefix: string;
+export function formatPrefixForSpeech(settings: VoiceSettings): string {
   switch (settings.prefixFormat) {
     case "numero":
-      spokenPrefix = letterPrefix ? `${letterPrefix} número` : "número";
-      break;
+      return "Número";
     case "senha_numero":
-      spokenPrefix = letterPrefix ? `Senha número ${letterPrefix}` : "Senha número";
-      break;
+      return "Senha número";
     case "custom":
-      spokenPrefix = settings.customPrefix || letterPrefix;
-      break;
+      return settings.customPrefix || "";
     case "senha":
     default:
-      spokenPrefix = letterPrefix ? `Senha ${letterPrefix}` : "Senha";
-      break;
+      return "Senha";
   }
+}
 
-  return `${spokenPrefix} ${spokenNumber}`;
+export function formatTicketForSpeech(displayNumber: string, settings: VoiceSettings): string {
+  const prefix = formatPrefixForSpeech(settings);
+  const number = formatNumberForSpeech(displayNumber, settings);
+  return prefix ? `${prefix} ${number}` : number;
+}
 }
 
 export function VoiceConfig() {
