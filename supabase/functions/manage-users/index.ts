@@ -49,7 +49,6 @@ serve(async (req) => {
 
       if (createError) throw createError;
 
-      // Assign role
       if (role && newUser.user) {
         await supabaseAdmin.from("user_roles").insert({
           user_id: newUser.user.id,
@@ -75,6 +74,16 @@ serve(async (req) => {
     if (action === "update_password") {
       const { userId, password } = body;
       const { error } = await supabaseAdmin.auth.admin.updateUserById(userId, { password });
+      if (error) throw error;
+
+      return new Response(JSON.stringify({ success: true }), {
+        headers: { ...corsHeaders, "Content-Type": "application/json" },
+      });
+    }
+
+    if (action === "update_email") {
+      const { userId, email } = body;
+      const { error } = await supabaseAdmin.auth.admin.updateUserById(userId, { email, email_confirm: true });
       if (error) throw error;
 
       return new Response(JSON.stringify({ success: true }), {

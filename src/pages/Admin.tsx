@@ -14,7 +14,7 @@ import {
   getTodayTickets,
   getPrintLogs,
   getPendingPrints,
-  resetAllTickets,
+  resetCalledTickets,
 } from "@/lib/ticket-service";
 import { printViaBrowser, printViaPrintServer, printViaCloud } from "@/lib/print-service";
 import type { PrintConfig, TicketLayout } from "@/lib/print-service";
@@ -24,11 +24,13 @@ import { CounterManagement } from "@/components/admin/CounterManagement";
 import { ServiceTypeManagement } from "@/components/admin/ServiceTypeManagement";
 import { Reports } from "@/components/admin/Reports";
 import { VoiceConfig } from "@/components/admin/VoiceConfig";
+import { QueueManagement } from "@/components/admin/QueueManagement";
+import { TotemConfig } from "@/components/admin/TotemConfig";
 import { toast } from "sonner";
 import { Link, Navigate } from "react-router-dom";
 import {
   Printer, Settings, FileText, History, RefreshCw, Save, TestTube,
-  LayoutTemplate, Users, Monitor, BarChart3, LogOut, Trash2, Volume2,
+  LayoutTemplate, Users, Monitor, BarChart3, LogOut, Trash2, Volume2, ListOrdered, Tablet,
 } from "lucide-react";
 
 const Admin = () => {
@@ -109,10 +111,10 @@ const Admin = () => {
           </div>
           <div className="flex gap-2">
             <Button variant="destructive" size="sm" onClick={async () => {
-              if (!confirm("Tem certeza que deseja zerar todas as senhas de hoje?")) return;
-              try { await resetAllTickets(); loadData(); toast.success("Senhas zeradas com sucesso!"); }
+              if (!confirm("Tem certeza que deseja cancelar todas as senhas chamadas/em atendimento?")) return;
+              try { await resetCalledTickets(); loadData(); toast.success("Senhas chamadas canceladas!"); }
               catch { toast.error("Erro ao zerar senhas"); }
-            }}><Trash2 className="h-4 w-4 mr-1" />Zerar Senhas</Button>
+            }}><Trash2 className="h-4 w-4 mr-1" />Zerar Chamadas</Button>
             <Link to="/totem"><Button variant="outline" size="sm">Totem</Button></Link>
             <Link to="/panel"><Button variant="outline" size="sm">Painel</Button></Link>
             <Link to="/counter"><Button variant="outline" size="sm">Guichê</Button></Link>
@@ -122,11 +124,13 @@ const Admin = () => {
       </header>
 
       <main className="container mx-auto p-6">
-        <Tabs defaultValue="counters" className="space-y-6">
-          <TabsList className="grid w-full grid-cols-8">
+        <Tabs defaultValue="queue" className="space-y-6">
+          <TabsList className="grid w-full grid-cols-10">
+            <TabsTrigger value="queue" className="gap-1 text-xs"><ListOrdered className="h-3 w-3" /> Fila</TabsTrigger>
             <TabsTrigger value="counters" className="gap-1 text-xs"><Monitor className="h-3 w-3" /> Guichês</TabsTrigger>
             <TabsTrigger value="services" className="gap-1 text-xs"><FileText className="h-3 w-3" /> Serviços</TabsTrigger>
             <TabsTrigger value="users" className="gap-1 text-xs"><Users className="h-3 w-3" /> Usuários</TabsTrigger>
+            <TabsTrigger value="totem" className="gap-1 text-xs"><Tablet className="h-3 w-3" /> Totem</TabsTrigger>
             <TabsTrigger value="printer" className="gap-1 text-xs"><Printer className="h-3 w-3" /> Impressora</TabsTrigger>
             <TabsTrigger value="layout" className="gap-1 text-xs"><LayoutTemplate className="h-3 w-3" /> Layout</TabsTrigger>
             <TabsTrigger value="voice" className="gap-1 text-xs"><Volume2 className="h-3 w-3" /> Voz</TabsTrigger>
@@ -134,9 +138,11 @@ const Admin = () => {
             <TabsTrigger value="logs" className="gap-1 text-xs"><History className="h-3 w-3" /> Logs</TabsTrigger>
           </TabsList>
 
+          <TabsContent value="queue"><QueueManagement /></TabsContent>
           <TabsContent value="counters"><CounterManagement /></TabsContent>
           <TabsContent value="services"><ServiceTypeManagement /></TabsContent>
           <TabsContent value="users"><UserManagement /></TabsContent>
+          <TabsContent value="totem"><TotemConfig /></TabsContent>
           <TabsContent value="voice"><VoiceConfig /></TabsContent>
           <TabsContent value="reports"><Reports /></TabsContent>
 
