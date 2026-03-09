@@ -41,6 +41,49 @@ serve(async (req) => {
     const supabaseKey = Deno.env.get('SUPABASE_SERVICE_ROLE_KEY')!;
     const supabaseClient = createClient(supabaseUrl, supabaseKey);
 
+    // For save_keys, skip reading existing keys
+    if (action === 'save_keys') {
+      const { new_api_key, new_activation_key } = body;
+      if (!new_api_key || !new_activation_key) {
+        return new Response(JSON.stringify({ error: 'Chaves obrigatórias' }), {
+          status: 400, headers: { ...corsHeaders, 'Content-Type': 'application/json' },
+        });
+      }
+
+      const { error: upsertError } = await supabaseClient
+        .from('system_config')
+        .upsert({
+          key: 'license_keys',
+          value: { api_key: new_api_key, activation_key: new_activation_key },
+          updated_at: new Date().toISOString(),
+        }, { onConflict: 'key' });
+
+      if (upsertError) {
+        return new Response(JSON.stringify({ error: 'Falha ao salvar: ' + upsertError.message }), {
+          status: 500, headers: { ...corsHeaders, 'Content-Type': 'application/json' },
+        });
+      }
+
+      try {
+        const testRes = await fetch(`${EXTERNAL_API}/license?activation_key=${encodeURIComponent(new_activation_key)}`, {
+          headers: { 'x-api-key': new_api_key },
+        });
+        if (testRes.ok) {
+          const testData = await testRes.json();
+          return new Response(JSON.stringify({ success: true, license: testData.license }), {
+            headers: { ...corsHeaders, 'Content-Type': 'application/json' },
+          });
+        }
+        return new Response(JSON.stringify({ success: true, warning: 'Chaves salvas mas teste falhou' }), {
+          headers: { ...corsHeaders, 'Content-Type': 'application/json' },
+        });
+      } catch {
+        return new Response(JSON.stringify({ success: true, warning: 'Chaves salvas mas teste falhou' }), {
+          headers: { ...corsHeaders, 'Content-Type': 'application/json' },
+        });
+      }
+    }
+
     // Get keys from database (server-side only)
     const { api_key, activation_key } = await getLicenseKeys(supabaseClient);
 
