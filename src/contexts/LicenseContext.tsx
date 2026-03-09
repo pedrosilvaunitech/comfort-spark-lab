@@ -61,6 +61,12 @@ export function LicenseProvider({ children }: { children: React.ReactNode }) {
       setIsConfigured(serverConfig.configured);
 
     try {
+      if (!serverConfig.configured) {
+        setIsConfigured(false);
+        setIsBlocked(false);
+        return;
+      }
+
       const [licRes, payRes] = await Promise.all([
         getLicense(),
         getPayments(),
