@@ -126,27 +126,27 @@ const Admin = () => {
 
       <main className="container mx-auto p-6">
         <Tabs defaultValue="queue" className="space-y-6">
-          <TabsList className="grid w-full grid-cols-11">
+          <TabsList className={`grid w-full ${isAdmin ? 'grid-cols-11' : 'grid-cols-2'}`}>
             <TabsTrigger value="queue" className="gap-1 text-xs"><ListOrdered className="h-3 w-3" /> Fila</TabsTrigger>
-            <TabsTrigger value="counters" className="gap-1 text-xs"><Monitor className="h-3 w-3" /> Guichês</TabsTrigger>
-            <TabsTrigger value="services" className="gap-1 text-xs"><FileText className="h-3 w-3" /> Serviços</TabsTrigger>
-            <TabsTrigger value="users" className="gap-1 text-xs"><Users className="h-3 w-3" /> Usuários</TabsTrigger>
-            <TabsTrigger value="totem" className="gap-1 text-xs"><Tablet className="h-3 w-3" /> Totem</TabsTrigger>
-            <TabsTrigger value="screens" className="gap-1 text-xs"><Palette className="h-3 w-3" /> Telas</TabsTrigger>
-            <TabsTrigger value="printer" className="gap-1 text-xs"><Printer className="h-3 w-3" /> Impressora</TabsTrigger>
-            <TabsTrigger value="layout" className="gap-1 text-xs"><LayoutTemplate className="h-3 w-3" /> Layout</TabsTrigger>
-            <TabsTrigger value="voice" className="gap-1 text-xs"><Volume2 className="h-3 w-3" /> Voz</TabsTrigger>
+            {isAdmin && <TabsTrigger value="counters" className="gap-1 text-xs"><Monitor className="h-3 w-3" /> Guichês</TabsTrigger>}
+            {isAdmin && <TabsTrigger value="services" className="gap-1 text-xs"><FileText className="h-3 w-3" /> Serviços</TabsTrigger>}
+            {isAdmin && <TabsTrigger value="users" className="gap-1 text-xs"><Users className="h-3 w-3" /> Usuários</TabsTrigger>}
+            {isAdmin && <TabsTrigger value="totem" className="gap-1 text-xs"><Tablet className="h-3 w-3" /> Totem</TabsTrigger>}
+            {isAdmin && <TabsTrigger value="screens" className="gap-1 text-xs"><Palette className="h-3 w-3" /> Telas</TabsTrigger>}
+            {isAdmin && <TabsTrigger value="printer" className="gap-1 text-xs"><Printer className="h-3 w-3" /> Impressora</TabsTrigger>}
+            {isAdmin && <TabsTrigger value="layout" className="gap-1 text-xs"><LayoutTemplate className="h-3 w-3" /> Layout</TabsTrigger>}
+            {isAdmin && <TabsTrigger value="voice" className="gap-1 text-xs"><Volume2 className="h-3 w-3" /> Voz</TabsTrigger>}
             <TabsTrigger value="reports" className="gap-1 text-xs"><BarChart3 className="h-3 w-3" /> Relatórios</TabsTrigger>
-            <TabsTrigger value="logs" className="gap-1 text-xs"><History className="h-3 w-3" /> Logs</TabsTrigger>
+            {isAdmin && <TabsTrigger value="logs" className="gap-1 text-xs"><History className="h-3 w-3" /> Logs</TabsTrigger>}
           </TabsList>
 
           <TabsContent value="queue"><QueueManagement /></TabsContent>
-          <TabsContent value="counters"><CounterManagement /></TabsContent>
-          <TabsContent value="services"><ServiceTypeManagement /></TabsContent>
-          <TabsContent value="users"><UserManagement /></TabsContent>
-          <TabsContent value="totem"><TotemConfig /></TabsContent>
-          <TabsContent value="screens"><ScreenConfigPanel /></TabsContent>
-          <TabsContent value="voice"><VoiceConfig /></TabsContent>
+          {isAdmin && <TabsContent value="counters"><CounterManagement /></TabsContent>}
+          {isAdmin && <TabsContent value="services"><ServiceTypeManagement /></TabsContent>}
+          {isAdmin && <TabsContent value="users"><UserManagement /></TabsContent>}
+          {isAdmin && <TabsContent value="totem"><TotemConfig /></TabsContent>}
+          {isAdmin && <TabsContent value="screens"><ScreenConfigPanel /></TabsContent>}
+          {isAdmin && <TabsContent value="voice"><VoiceConfig /></TabsContent>}
           <TabsContent value="reports"><Reports /></TabsContent>
 
           {/* PRINTER CONFIG */}
