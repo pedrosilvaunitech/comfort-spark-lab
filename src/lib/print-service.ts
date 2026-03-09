@@ -1,5 +1,6 @@
 import { logPrint, getSystemConfig } from "./ticket-service";
 import type { Ticket } from "./ticket-service";
+import { isAndroid, printViaAndroidUsb } from "./native-print";
 
 export interface PrintConfig {
   enabled: boolean;
