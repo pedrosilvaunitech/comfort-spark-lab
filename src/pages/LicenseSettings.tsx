@@ -41,9 +41,7 @@ const LicenseSettings = () => {
     setTesting(true);
     setTestResult(null);
     try {
-      // Save keys first then test via proxy
-      const result = await saveKeysToServer(config.apiKey, config.activationKey);
-      saveConfigLocal(config);
+      const result = await saveKeysToServer(config.apiKey, config.activationKey, config.toleranciaDiasAtraso);
       if (result.license) {
         setTestResult(result.license);
         toast.success("Conexão OK!");
