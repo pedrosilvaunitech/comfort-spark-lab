@@ -42,6 +42,7 @@ async function proxyRequest<T>(body: Record<string, any>): Promise<T> {
   });
 
   if (error) throw new Error(error.message || 'Falha na requisição');
+  if (data?.not_configured) throw new Error('Chaves de licença não configuradas no sistema');
   if (data?.error) throw new Error(data.error);
   return data as T;
 }
