@@ -185,12 +185,68 @@ export function VoiceConfig() {
             <Input
               value={settings.template}
               onChange={(e) => setSettings({ ...settings, template: e.target.value })}
-              placeholder="Senha {senha}, dirija-se ao {guiche}"
+              placeholder="{prefixo} {senha}, dirija-se ao {guiche}"
             />
             <p className="text-xs text-muted-foreground mt-1">
-              Use <code className="bg-muted px-1 rounded">{"{senha}"}</code> para o número e{" "}
-              <code className="bg-muted px-1 rounded">{"{guiche}"}</code> para o nome do guichê.
+              Use <code className="bg-muted px-1 rounded">{"{prefixo}"}</code> + <code className="bg-muted px-1 rounded">{"{senha}"}</code> para a chamada e{" "}
+              <code className="bg-muted px-1 rounded">{"{guiche}"}</code> para o guichê. Ou use <code className="bg-muted px-1 rounded">{"{prefixo} {senha}"}</code> juntos.
             </p>
+          </div>
+
+          <div>
+            <Label className="mb-2 block">Como chamar o prefixo</Label>
+            <RadioGroup
+              value={settings.prefixFormat}
+              onValueChange={(v) => setSettings({ ...settings, prefixFormat: v as VoiceSettings["prefixFormat"] })}
+              className="space-y-2"
+            >
+              <div className="flex items-center gap-2">
+                <RadioGroupItem value="senha" id="pf-senha" />
+                <Label htmlFor="pf-senha" className="font-normal">Senha N 1 → <span className="text-muted-foreground">"Senha N 1"</span></Label>
+              </div>
+              <div className="flex items-center gap-2">
+                <RadioGroupItem value="numero" id="pf-numero" />
+                <Label htmlFor="pf-numero" className="font-normal">N número 1 → <span className="text-muted-foreground">"N número 1"</span></Label>
+              </div>
+              <div className="flex items-center gap-2">
+                <RadioGroupItem value="senha_numero" id="pf-senha-numero" />
+                <Label htmlFor="pf-senha-numero" className="font-normal">Senha número N 1 → <span className="text-muted-foreground">"Senha número N 1"</span></Label>
+              </div>
+              <div className="flex items-center gap-2">
+                <RadioGroupItem value="custom" id="pf-custom" />
+                <Label htmlFor="pf-custom" className="font-normal">Personalizado</Label>
+              </div>
+            </RadioGroup>
+            {settings.prefixFormat === "custom" && (
+              <Input
+                className="mt-2"
+                value={settings.customPrefix}
+                onChange={(e) => setSettings({ ...settings, customPrefix: e.target.value })}
+                placeholder="Ex: Senha número"
+              />
+            )}
+          </div>
+
+          <div>
+            <Label className="mb-2 block">Formato do número</Label>
+            <RadioGroup
+              value={settings.numberFormat}
+              onValueChange={(v) => setSettings({ ...settings, numberFormat: v as VoiceSettings["numberFormat"] })}
+              className="space-y-2"
+            >
+              <div className="flex items-center gap-2">
+                <RadioGroupItem value="no_zeros" id="nf-no-zeros" />
+                <Label htmlFor="nf-no-zeros" className="font-normal">Sem zeros → 0001 fala <span className="text-muted-foreground">"1"</span></Label>
+              </div>
+              <div className="flex items-center gap-2">
+                <RadioGroupItem value="full" id="nf-full" />
+                <Label htmlFor="nf-full" className="font-normal">Número completo → 1002 fala <span className="text-muted-foreground">"1002"</span></Label>
+              </div>
+              <div className="flex items-center gap-2">
+                <RadioGroupItem value="digit_by_digit" id="nf-digit" />
+                <Label htmlFor="nf-digit" className="font-normal">Dígito por dígito → 1002 fala <span className="text-muted-foreground">"1 0 0 2"</span></Label>
+              </div>
+            </RadioGroup>
           </div>
 
           <div>
