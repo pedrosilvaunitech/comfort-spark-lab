@@ -145,6 +145,7 @@ const Admin = () => {
           <TabsContent value="services"><ServiceTypeManagement /></TabsContent>
           <TabsContent value="users"><UserManagement /></TabsContent>
           <TabsContent value="totem"><TotemConfig /></TabsContent>
+          <TabsContent value="screens"><ScreenConfigPanel /></TabsContent>
           <TabsContent value="voice"><VoiceConfig /></TabsContent>
           <TabsContent value="reports"><Reports /></TabsContent>
 
