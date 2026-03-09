@@ -53,19 +53,13 @@ export function LicenseProvider({ children }: { children: React.ReactNode }) {
 
   const checkLicense = useCallback(async () => {
     const config = getStoredConfig();
-    if (!config.apiKey || !config.activationKey) {
-      setIsConfigured(false);
-      setIsBlocked(false);
-      return;
-    }
-    setIsConfigured(true);
     setDiasTolerancia(config.toleranciaDiasAtraso);
     setChecking(true);
 
     try {
       const [licRes, payRes] = await Promise.all([
-        getLicense(config.activationKey),
-        getPayments(config.activationKey),
+        getLicense(),
+        getPayments(),
       ]);
 
       const lic = licRes.license;
