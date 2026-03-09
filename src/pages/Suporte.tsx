@@ -42,15 +42,10 @@ const Suporte = () => {
   useEffect(() => { messagesEnd.current?.scrollIntoView({ behavior: 'smooth' }); }, [messages]);
 
   const loadTickets = async () => {
-    const config = getStoredConfig();
-    if (!config.apiKey || !config.activationKey) {
-      setError("Licença não configurada. Configure em Configuração de Licença primeiro.");
-      return;
-    }
     setLoadingTickets(true);
     setError(null);
     try {
-      const res = await getTickets(config.activationKey);
+      const res = await getTickets();
       setTickets(res.tickets || []);
     } catch (err: any) {
       console.error('[Suporte] loadTickets error:', err);
