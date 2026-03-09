@@ -155,7 +155,14 @@ const Suporte = () => {
                   <p className="text-xs text-muted-foreground">{new Date(t.created_at).toLocaleDateString('pt-BR')}</p>
                 </button>
               ))}
-              {tickets.length === 0 && <p className="text-center py-8 text-muted-foreground text-sm">Nenhum ticket</p>}
+              {tickets.length === 0 && !loadingTickets && !error && <p className="text-center py-8 text-muted-foreground text-sm">Nenhum ticket</p>}
+              {loadingTickets && <p className="text-center py-8 text-muted-foreground text-sm">Carregando...</p>}
+              {error && (
+                <div className="text-center py-8 space-y-2">
+                  <p className="text-destructive text-sm">{error}</p>
+                  <Button variant="outline" size="sm" onClick={loadTickets}>Tentar novamente</Button>
+                </div>
+              )}
             </CardContent>
           </Card>
 
