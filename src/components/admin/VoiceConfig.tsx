@@ -129,12 +129,14 @@ export function VoiceConfig() {
   const getPreviewTextFull = (displayNumber = "N0001") => {
     const prefix = formatPrefixForSpeech(settings);
     const number = formatNumberForSpeech(displayNumber, settings);
-    return settings.template
-      .replace("{prefixo}", prefix)
-      .replace("{senha}", number)
-      .replace("{guiche}", "Guichê 1")
-      .replace(/\s+/g, " ")
-      .trim();
+    let text = settings.template;
+    if (text.includes("{prefixo}")) {
+      text = text.replace("{prefixo}", prefix).replace("{senha}", number);
+    } else {
+      const fullSpoken = prefix ? `${prefix} ${number}` : number;
+      text = text.replace("{senha}", fullSpoken);
+    }
+    return text.replace("{guiche}", "Guichê 1").replace(/\s+/g, " ").trim();
   };
 
   const handleTestVoice = () => {

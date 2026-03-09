@@ -60,12 +60,19 @@ function findVoice(settings: VoiceSettings): SpeechSynthesisVoice | null {
 async function speakTicket(displayNumber: string, counterName: string, settings: VoiceSettings) {
   const spokenPrefix = formatPrefixForSpeech(settings);
   const spokenNumber = formatNumberForSpeech(displayNumber, settings);
-  const text = settings.template
-    .replace("{prefixo}", spokenPrefix)
-    .replace("{senha}", spokenNumber)
-    .replace("{guiche}", counterName)
-    .replace(/\s+/g, " ")
-    .trim();
+  
+  let text = settings.template;
+  
+  // Support both old ("{senha}") and new ("{prefixo} {senha}") templates
+  if (text.includes("{prefixo}")) {
+    text = text.replace("{prefixo}", spokenPrefix).replace("{senha}", spokenNumber);
+  } else {
+    // Old template without {prefixo}: combine prefix + number into {senha}
+    const fullSpoken = spokenPrefix ? `${spokenPrefix} ${spokenNumber}` : spokenNumber;
+    text = text.replace("{senha}", fullSpoken);
+  }
+  
+  text = text.replace("{guiche}", counterName).replace(/\s+/g, " ").trim();
 
   speechSynthesis.cancel();
   if (settings.beepEnabled) await playBeep();
