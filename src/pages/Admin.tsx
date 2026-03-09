@@ -111,11 +111,11 @@ const Admin = () => {
             <h1 className="text-xl font-bold text-card-foreground">Administração</h1>
           </div>
           <div className="flex gap-2">
-            <Button variant="destructive" size="sm" onClick={async () => {
-              if (!confirm("Tem certeza que deseja cancelar todas as senhas chamadas/em atendimento?")) return;
-              try { await resetCalledTickets(); loadData(); toast.success("Senhas chamadas canceladas!"); }
+            {isAdmin && <Button variant="destructive" size="sm" onClick={async () => {
+              if (!confirm("Tem certeza que deseja ZERAR TUDO? Isso cancelará todas as senhas (fila, chamadas e atendimentos) e reiniciará a sequência numérica do dia.")) return;
+              try { await resetCalledTickets(); loadData(); toast.success("Sistema zerado! Sequência reiniciada."); }
               catch { toast.error("Erro ao zerar senhas"); }
-            }}><Trash2 className="h-4 w-4 mr-1" />Zerar Chamadas</Button>
+            }}><Trash2 className="h-4 w-4 mr-1" />Zerar Tudo</Button>}
             <Link to="/totem"><Button variant="outline" size="sm">Totem</Button></Link>
             <Link to="/panel"><Button variant="outline" size="sm">Painel</Button></Link>
             <Link to="/counter"><Button variant="outline" size="sm">Guichê</Button></Link>
