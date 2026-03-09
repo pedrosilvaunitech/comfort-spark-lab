@@ -7,7 +7,7 @@ import { Badge } from "@/components/ui/badge";
 import { Textarea } from "@/components/ui/textarea";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger } from "@/components/ui/dialog";
-import { getTickets, getTicketMessages, sendMessage, createTicket, getStoredConfig } from "@/services/licenseApi";
+import { getTickets, getTicketMessages, sendMessage, createTicket } from "@/services/licenseApi";
 import { useAuth } from "@/hooks/use-auth";
 import { Navigate, Link } from "react-router-dom";
 import { toast } from "sonner";
