@@ -1,38 +1,9 @@
 import { supabase } from "@/integrations/supabase/client";
 
-const LICENSE_CONFIG_KEY = 'license_config';
-
 export interface LicenseConfig {
   apiKey: string;
   activationKey: string;
   toleranciaDiasAtraso: number;
-}
-
-// Only stores tolerance locally - keys go to DB via proxy
-export function getStoredConfig(): LicenseConfig {
-  try {
-    const stored = localStorage.getItem(LICENSE_CONFIG_KEY);
-    if (stored) return JSON.parse(stored);
-  } catch {}
-  return { apiKey: '', activationKey: '', toleranciaDiasAtraso: 5 };
-}
-
-export function saveConfigLocal(config: LicenseConfig) {
-  localStorage.setItem(LICENSE_CONFIG_KEY, JSON.stringify(config));
-}
-
-// Save keys securely to database via edge function
-export async function saveKeysToServer(apiKey: string, activationKey: string): Promise<{ success: boolean; license?: any; warning?: string }> {
-  const { data, error } = await supabase.functions.invoke('license-proxy', {
-    body: {
-      action: 'save_keys',
-      new_api_key: apiKey,
-      new_activation_key: activationKey,
-    },
-  });
-  if (error) throw new Error(error.message || 'Falha ao salvar chaves');
-  if (data?.error) throw new Error(data.error);
-  return data;
 }
 
 // Client NEVER sends keys - proxy reads from DB
@@ -45,6 +16,37 @@ async function proxyRequest<T>(body: Record<string, any>): Promise<T> {
   if (data?.not_configured) throw new Error('Chaves de licença não configuradas no sistema');
   if (data?.error) throw new Error(data.error);
   return data as T;
+}
+
+// Get config status from DB (no keys exposed)
+export async function getConfigFromServer(): Promise<{ configured: boolean; tolerancia_dias: number }> {
+  try {
+    const { data, error } = await supabase.functions.invoke('license-proxy', {
+      body: { action: 'get_config' },
+    });
+    if (error || !data) return { configured: false, tolerancia_dias: 5 };
+    return {
+      configured: !!data.configured,
+      tolerancia_dias: data.tolerancia_dias ?? 5,
+    };
+  } catch {
+    return { configured: false, tolerancia_dias: 5 };
+  }
+}
+
+// Save keys + tolerance securely to database via edge function
+export async function saveKeysToServer(apiKey: string, activationKey: string, toleranciaDias: number = 5): Promise<{ success: boolean; license?: any; warning?: string }> {
+  const { data, error } = await supabase.functions.invoke('license-proxy', {
+    body: {
+      action: 'save_keys',
+      new_api_key: apiKey,
+      new_activation_key: activationKey,
+      tolerancia_dias: toleranciaDias,
+    },
+  });
+  if (error) throw new Error(error.message || 'Falha ao salvar chaves');
+  if (data?.error) throw new Error(data.error);
+  return data;
 }
 
 export async function getLicense() {
