@@ -100,7 +100,7 @@ const Admin = () => {
 
   if (authLoading) return <div className="min-h-screen flex items-center justify-center"><p>Carregando...</p></div>;
   if (!user) return <Navigate to="/login" />;
-  if && !isGestor) return <div className="min-h-screen flex items-center justify-center"><p className="text-destructive">Acesso restrito a administradores e gestdministradores</p></div>;
+  if (!isAdmin && !isGestor) return <div className="min-h-screen flex items-center justify-center"><p className="text-destructive">Acesso restrito a administradores e gestores</p></div>;
 
   return (
     <div className="min-h-screen bg-background">
