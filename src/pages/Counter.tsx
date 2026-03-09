@@ -17,6 +17,7 @@ import { supabase } from "@/integrations/supabase/client";
 import { CheckCircle, XCircle, Printer, SkipForward, LogOut, Volume2, PhoneCall } from "lucide-react";
 import { toast } from "sonner";
 import { Link, Navigate, useLocation } from "react-router-dom";
+import { useScreenConfig } from "@/hooks/use-screen-config";
 
 const CounterPage = () => {
   const { user, loading: authLoading, isOperator, signOut } = useAuth();
