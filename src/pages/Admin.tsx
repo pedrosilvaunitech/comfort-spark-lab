@@ -35,7 +35,7 @@ import {
 } from "lucide-react";
 
 const Admin = () => {
-  const { user, loading: authLoading, isAdmin, signOut } = useAuth();
+  const { user, loading: authLoading, isAdmin, isGestor, signOut } = useAuth();
   const [printerConfig, setPrinterConfig] = useState<PrintConfig>({
     enabled: false, connectionType: "network", ip: "192.168.1.100", port: 9100,
     usbVendorId: "", usbProductId: "", serialPort: "COM1", serialBaudrate: 9600,
@@ -100,7 +100,7 @@ const Admin = () => {
 
   if (authLoading) return <div className="min-h-screen flex items-center justify-center"><p>Carregando...</p></div>;
   if (!user) return <Navigate to="/login" />;
-  if (!isAdmin) return <div className="min-h-screen flex items-center justify-center"><p className="text-destructive">Acesso restrito a administradores</p></div>;
+  if (!isAdmin && !isGestor) return <div className="min-h-screen flex items-center justify-center"><p className="text-destructive">Acesso restrito a administradores e gestores</p></div>;
 
   return (
     <div className="min-h-screen bg-background">
@@ -111,11 +111,11 @@ const Admin = () => {
             <h1 className="text-xl font-bold text-card-foreground">Administração</h1>
           </div>
           <div className="flex gap-2">
-            <Button variant="destructive" size="sm" onClick={async () => {
-              if (!confirm("Tem certeza que deseja cancelar todas as senhas chamadas/em atendimento?")) return;
-              try { await resetCalledTickets(); loadData(); toast.success("Senhas chamadas canceladas!"); }
+            {isAdmin && <Button variant="destructive" size="sm" onClick={async () => {
+              if (!confirm("Tem certeza que deseja ZERAR TUDO? Isso cancelará todas as senhas (fila, chamadas e atendimentos) e reiniciará a sequência numérica do dia.")) return;
+              try { await resetCalledTickets(); loadData(); toast.success("Sistema zerado! Sequência reiniciada."); }
               catch { toast.error("Erro ao zerar senhas"); }
-            }}><Trash2 className="h-4 w-4 mr-1" />Zerar Chamadas</Button>
+            }}><Trash2 className="h-4 w-4 mr-1" />Zerar Tudo</Button>}
             <Link to="/totem"><Button variant="outline" size="sm">Totem</Button></Link>
             <Link to="/panel"><Button variant="outline" size="sm">Painel</Button></Link>
             <Link to="/counter"><Button variant="outline" size="sm">Guichê</Button></Link>
@@ -126,27 +126,27 @@ const Admin = () => {
 
       <main className="container mx-auto p-6">
         <Tabs defaultValue="queue" className="space-y-6">
-          <TabsList className="grid w-full grid-cols-11">
+          <TabsList className={`grid w-full ${isAdmin ? 'grid-cols-11' : 'grid-cols-2'}`}>
             <TabsTrigger value="queue" className="gap-1 text-xs"><ListOrdered className="h-3 w-3" /> Fila</TabsTrigger>
-            <TabsTrigger value="counters" className="gap-1 text-xs"><Monitor className="h-3 w-3" /> Guichês</TabsTrigger>
-            <TabsTrigger value="services" className="gap-1 text-xs"><FileText className="h-3 w-3" /> Serviços</TabsTrigger>
-            <TabsTrigger value="users" className="gap-1 text-xs"><Users className="h-3 w-3" /> Usuários</TabsTrigger>
-            <TabsTrigger value="totem" className="gap-1 text-xs"><Tablet className="h-3 w-3" /> Totem</TabsTrigger>
-            <TabsTrigger value="screens" className="gap-1 text-xs"><Palette className="h-3 w-3" /> Telas</TabsTrigger>
-            <TabsTrigger value="printer" className="gap-1 text-xs"><Printer className="h-3 w-3" /> Impressora</TabsTrigger>
-            <TabsTrigger value="layout" className="gap-1 text-xs"><LayoutTemplate className="h-3 w-3" /> Layout</TabsTrigger>
-            <TabsTrigger value="voice" className="gap-1 text-xs"><Volume2 className="h-3 w-3" /> Voz</TabsTrigger>
+            {isAdmin && <TabsTrigger value="counters" className="gap-1 text-xs"><Monitor className="h-3 w-3" /> Guichês</TabsTrigger>}
+            {isAdmin && <TabsTrigger value="services" className="gap-1 text-xs"><FileText className="h-3 w-3" /> Serviços</TabsTrigger>}
+            {isAdmin && <TabsTrigger value="users" className="gap-1 text-xs"><Users className="h-3 w-3" /> Usuários</TabsTrigger>}
+            {isAdmin && <TabsTrigger value="totem" className="gap-1 text-xs"><Tablet className="h-3 w-3" /> Totem</TabsTrigger>}
+            {isAdmin && <TabsTrigger value="screens" className="gap-1 text-xs"><Palette className="h-3 w-3" /> Telas</TabsTrigger>}
+            {isAdmin && <TabsTrigger value="printer" className="gap-1 text-xs"><Printer className="h-3 w-3" /> Impressora</TabsTrigger>}
+            {isAdmin && <TabsTrigger value="layout" className="gap-1 text-xs"><LayoutTemplate className="h-3 w-3" /> Layout</TabsTrigger>}
+            {isAdmin && <TabsTrigger value="voice" className="gap-1 text-xs"><Volume2 className="h-3 w-3" /> Voz</TabsTrigger>}
             <TabsTrigger value="reports" className="gap-1 text-xs"><BarChart3 className="h-3 w-3" /> Relatórios</TabsTrigger>
-            <TabsTrigger value="logs" className="gap-1 text-xs"><History className="h-3 w-3" /> Logs</TabsTrigger>
+            {isAdmin && <TabsTrigger value="logs" className="gap-1 text-xs"><History className="h-3 w-3" /> Logs</TabsTrigger>}
           </TabsList>
 
           <TabsContent value="queue"><QueueManagement /></TabsContent>
-          <TabsContent value="counters"><CounterManagement /></TabsContent>
-          <TabsContent value="services"><ServiceTypeManagement /></TabsContent>
-          <TabsContent value="users"><UserManagement /></TabsContent>
-          <TabsContent value="totem"><TotemConfig /></TabsContent>
-          <TabsContent value="screens"><ScreenConfigPanel /></TabsContent>
-          <TabsContent value="voice"><VoiceConfig /></TabsContent>
+          {isAdmin && <TabsContent value="counters"><CounterManagement /></TabsContent>}
+          {isAdmin && <TabsContent value="services"><ServiceTypeManagement /></TabsContent>}
+          {isAdmin && <TabsContent value="users"><UserManagement /></TabsContent>}
+          {isAdmin && <TabsContent value="totem"><TotemConfig /></TabsContent>}
+          {isAdmin && <TabsContent value="screens"><ScreenConfigPanel /></TabsContent>}
+          {isAdmin && <TabsContent value="voice"><VoiceConfig /></TabsContent>}
           <TabsContent value="reports"><Reports /></TabsContent>
 
           {/* PRINTER CONFIG */}

@@ -22,14 +22,14 @@ export function UserManagement() {
   const [newName, setNewName] = useState("");
   const [newEmail, setNewEmail] = useState("");
   const [newPassword, setNewPassword] = useState("");
-  const [newRole, setNewRole] = useState<"admin" | "operator">("operator");
+  const [newRole, setNewRole] = useState<"admin" | "operator" | "gestor" | "gestor">("operator");
   const [creating, setCreating] = useState(false);
 
   // Edit states
   const [editingUser, setEditingUser] = useState<UserWithRole | null>(null);
   const [editName, setEditName] = useState("");
   const [editEmail, setEditEmail] = useState("");
-  const [editRole, setEditRole] = useState<"admin" | "operator">("operator");
+  const [editRole, setEditRole] = useState<"admin" | "operator" | "gestor">("operator");
   const [editPassword, setEditPassword] = useState("");
   const [editOpen, setEditOpen] = useState(false);
   const [saving, setSaving] = useState(false);
@@ -147,6 +147,7 @@ export function UserManagement() {
                 <SelectTrigger><SelectValue /></SelectTrigger>
                 <SelectContent>
                   <SelectItem value="operator">Atendente</SelectItem>
+                  <SelectItem value="gestor">Gestor</SelectItem>
                   <SelectItem value="admin">Administrador</SelectItem>
                 </SelectContent>
               </Select>
@@ -169,8 +170,8 @@ export function UserManagement() {
                   <p className="text-sm text-muted-foreground">{u.email}</p>
                   <div className="flex gap-1 mt-1">
                     {u.roles.map((r) => (
-                      <Badge key={r} variant={r === "admin" ? "default" : "secondary"}>
-                        {r === "admin" ? "Admin" : "Atendente"}
+                      <Badge key={r} variant={r === "admin" ? "default" : r === "gestor" ? "outline" : "secondary"}>
+                        {r === "admin" ? "Admin" : r === "gestor" ? "Gestor" : "Atendente"}
                       </Badge>
                     ))}
                     {u.roles.length === 0 && <Badge variant="outline">Sem função</Badge>}
@@ -208,6 +209,7 @@ export function UserManagement() {
                 <SelectTrigger><SelectValue /></SelectTrigger>
                 <SelectContent>
                   <SelectItem value="operator">Atendente</SelectItem>
+                  <SelectItem value="gestor">Gestor</SelectItem>
                   <SelectItem value="admin">Administrador</SelectItem>
                 </SelectContent>
               </Select>
