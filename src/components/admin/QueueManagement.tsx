@@ -68,15 +68,7 @@ export function QueueManagement() {
 
       if (error) throw error;
 
-      // Speak the custom text immediately
-      speechSynthesis.cancel();
-      const utterance = new SpeechSynthesisUtterance(customVoiceText);
-      utterance.lang = "pt-BR";
-      utterance.rate = 0.9;
-      const voices = speechSynthesis.getVoices();
-      const ptVoice = voices.find((v) => v.lang.startsWith("pt") && v.name.toLowerCase().includes("google")) || voices.find((v) => v.lang.startsWith("pt-BR"));
-      if (ptVoice) utterance.voice = ptVoice;
-      speechSynthesis.speak(utterance);
+      // Voice will be triggered automatically on the Panel screen via realtime
 
       toast.success(`Senha ${selectedTicket.display_number} chamada!`);
       setCallDialogOpen(false);
