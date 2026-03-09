@@ -76,8 +76,11 @@ const Suporte = () => {
     try {
       await sendMessage(selectedTicket.id, config.activationKey, newMsg);
       setNewMsg('');
-      loadMessages(selectedTicket.id);
-    } catch { toast.error("Falha ao enviar"); }
+      await loadMessages(selectedTicket.id);
+    } catch (err: any) {
+      console.error('[Suporte] send error:', err);
+      toast.error(err.message || "Falha ao enviar");
+    }
     finally { setSending(false); }
   };
 
