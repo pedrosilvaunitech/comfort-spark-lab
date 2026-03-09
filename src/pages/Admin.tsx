@@ -35,7 +35,7 @@ import {
 } from "lucide-react";
 
 const Admin = () => {
-  const { user, loading: authLoading, isAdmin, isGestor, signOut } = useAuth();
+  const { user, loading: authLoading, isAdmin, isGestor, isGestor, signOut } = useAuth();
   const [printerConfig, setPrinterConfig] = useState<PrintConfig>({
     enabled: false, connectionType: "network", ip: "192.168.1.100", port: 9100,
     usbVendorId: "", usbProductId: "", serialPort: "COM1", serialBaudrate: 9600,
@@ -100,7 +100,7 @@ const Admin = () => {
 
   if (authLoading) return <div className="min-h-screen flex items-center justify-center"><p>Carregando...</p></div>;
   if (!user) return <Navigate to="/login" />;
-  if (!isAdmin) return <div className="min-h-screen flex items-center justify-center"><p className="text-destructive">Acesso restrito a administradores</p></div>;
+  if && !isGestor) return <div className="min-h-screen flex items-center justify-center"><p className="text-destructive">Acesso restrito a administradores e gestdministradores</p></div>;
 
   return (
     <div className="min-h-screen bg-background">
