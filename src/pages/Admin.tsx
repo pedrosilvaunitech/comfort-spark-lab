@@ -28,6 +28,7 @@ import { QueueManagement } from "@/components/admin/QueueManagement";
 import { TotemConfig } from "@/components/admin/TotemConfig";
 import { ScreenConfigPanel } from "@/components/admin/ScreenConfig";
 import { PriorityConfig } from "@/components/admin/PriorityConfig";
+import { LicenseIndicator } from "@/components/admin/LicenseIndicator";
 import { toast } from "sonner";
 import { Link, Navigate } from "react-router-dom";
 import {
@@ -111,7 +112,8 @@ const Admin = () => {
             <Settings className="h-6 w-6 text-primary" />
             <h1 className="text-xl font-bold text-card-foreground">Administração</h1>
           </div>
-          <div className="flex gap-2">
+          <div className="flex items-center gap-2">
+            <LicenseIndicator />
             {isAdmin && <Button variant="destructive" size="sm" onClick={async () => {
               if (!confirm("Tem certeza que deseja ZERAR TUDO? Isso cancelará todas as senhas (fila, chamadas e atendimentos) e reiniciará a sequência numérica do dia.")) return;
               try { await resetCalledTickets(); loadData(); toast.success("Sistema zerado! Sequência reiniciada."); }
