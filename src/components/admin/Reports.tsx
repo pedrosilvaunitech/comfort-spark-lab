@@ -303,6 +303,34 @@ export function Reports() {
         </Card>
       </div>
 
+      {/* Daily chart for multi-day ranges */}
+      {isMultiDay && dailyStats.length > 1 && (
+        <Card>
+          <CardHeader>
+            <CardTitle>Senhas por Dia</CardTitle>
+            <CardDescription>Total de senhas geradas por dia no período</CardDescription>
+          </CardHeader>
+          <CardContent>
+            <ResponsiveContainer width="100%" height={280}>
+              <LineChart data={dailyStats}>
+                <CartesianGrid strokeDasharray="3 3" className="stroke-border" />
+                <XAxis dataKey="day" className="text-xs" />
+                <YAxis allowDecimals={false} className="text-xs" />
+                <Tooltip
+                  contentStyle={{
+                    backgroundColor: "hsl(var(--card))",
+                    border: "1px solid hsl(var(--border))",
+                    borderRadius: "8px",
+                    color: "hsl(var(--card-foreground))",
+                  }}
+                />
+                <Line type="monotone" dataKey="count" stroke="hsl(var(--primary))" strokeWidth={2} dot={{ r: 4 }} name="Senhas" />
+              </LineChart>
+            </ResponsiveContainer>
+          </CardContent>
+        </Card>
+      )}
+
       {/* Charts */}
       <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
         {/* Hourly Distribution */}
