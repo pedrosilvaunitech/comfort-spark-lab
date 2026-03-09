@@ -35,7 +35,7 @@ import {
 } from "lucide-react";
 
 const Admin = () => {
-  const { user, loading: authLoading, isAdmin, isGestor, isGestor, signOut } = useAuth();
+  const { user, loading: authLoading, isAdmin, isGestor, signOut } = useAuth();
   const [printerConfig, setPrinterConfig] = useState<PrintConfig>({
     enabled: false, connectionType: "network", ip: "192.168.1.100", port: 9100,
     usbVendorId: "", usbProductId: "", serialPort: "COM1", serialBaudrate: 9600,
