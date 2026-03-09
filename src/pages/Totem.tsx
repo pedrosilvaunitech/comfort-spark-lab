@@ -8,6 +8,7 @@ import { printTicket } from "@/lib/print-service";
 import { supabase } from "@/integrations/supabase/client";
 import type { ServiceType, Ticket } from "@/lib/ticket-service";
 import { Printer, User, FileText, Heart, ArrowLeft } from "lucide-react";
+import { useScreenConfig } from "@/hooks/use-screen-config";
 
 type Step = "select_type" | "optional_info" | "ticket_generated";
 
@@ -28,6 +29,7 @@ const Totem = () => {
   const [generatedTicket, setGeneratedTicket] = useState<Ticket | null>(null);
   const [loading, setLoading] = useState(false);
   const [totemConfig, setTotemConfig] = useState<TotemConfig>(defaultTotemConfig);
+  const { config: screenConfig } = useScreenConfig();
 
   const loadServiceTypes = useCallback(() => {
     getServiceTypes().then(setServiceTypes).catch(console.error);
@@ -49,7 +51,6 @@ const Totem = () => {
 
   const handleSelectType = (type: ServiceType) => {
     setSelectedType(type);
-    // If neither name nor CPF is configured, skip directly to generate
     if (!totemConfig.askName && !totemConfig.askCpf) {
       handleGenerateDirect(type);
     } else {
@@ -113,11 +114,21 @@ const Totem = () => {
     E: <Printer className="h-12 w-12" />,
   };
 
+  const bgStyle = screenConfig.totemBgColor ? { backgroundColor: screenConfig.totemBgColor } : {};
+  const textStyle = screenConfig.totemTextColor ? { color: screenConfig.totemTextColor } : {};
+
   return (
-    <div className="min-h-screen bg-primary flex flex-col items-center justify-center p-6">
+    <div className="min-h-screen bg-primary flex flex-col items-center justify-center p-6" style={bgStyle}>
       <div className="text-center mb-8">
-        <h1 className="text-4xl font-bold text-primary-foreground mb-2">Sistema de Senhas</h1>
-        <p className="text-primary-foreground/80 text-lg">Toque para retirar sua senha</p>
+        {screenConfig.logoUrl && (
+          <img src={screenConfig.logoUrl} alt="Logo" className="h-20 mx-auto mb-4 object-contain" />
+        )}
+        <h1 className="text-4xl font-bold text-primary-foreground mb-2" style={textStyle}>
+          {screenConfig.totemTitle || "Sistema de Senhas"}
+        </h1>
+        <p className="text-primary-foreground/80 text-lg" style={textStyle ? { ...textStyle, opacity: 0.8 } : {}}>
+          {screenConfig.totemSubtitle || "Toque para retirar sua senha"}
+        </p>
       </div>
 
       {step === "select_type" && (
@@ -149,7 +160,6 @@ const Totem = () => {
                 {totemConfig.askName || totemConfig.askCpf ? "Informações opcionais (toque em gerar para pular)" : ""}
               </p>
             </div>
-
             <div className="space-y-4">
               {totemConfig.askName && (
                 <div>
@@ -166,7 +176,6 @@ const Totem = () => {
                 </div>
               )}
             </div>
-
             <div className="flex gap-3">
               <Button variant="outline" onClick={() => setStep("select_type")} className="flex-1">
                 <ArrowLeft className="h-4 w-4 mr-2" /> Voltar

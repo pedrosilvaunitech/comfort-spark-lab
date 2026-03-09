@@ -17,6 +17,7 @@ import { supabase } from "@/integrations/supabase/client";
 import { CheckCircle, XCircle, Printer, SkipForward, LogOut, Volume2, PhoneCall } from "lucide-react";
 import { toast } from "sonner";
 import { Link, Navigate, useLocation } from "react-router-dom";
+import { useScreenConfig } from "@/hooks/use-screen-config";
 
 const CounterPage = () => {
   const { user, loading: authLoading, isOperator, signOut } = useAuth();
@@ -27,6 +28,7 @@ const CounterPage = () => {
   const [currentTicket, setCurrentTicket] = useState<any>(null);
   const [loading, setLoading] = useState(false);
   const { counters, waitingTickets, calledTickets, refresh } = useRealtimeTickets();
+  const { config: screenConfig } = useScreenConfig();
 
   const selectedCounter = counters.find((c: any) => c.id === selectedCounterId);
 
@@ -181,7 +183,12 @@ const CounterPage = () => {
     <div className="min-h-screen bg-background">
       <header className="bg-card border-b border-border p-4">
         <div className="container mx-auto flex items-center justify-between">
-          <h1 className="text-xl font-bold text-card-foreground">Painel do Guichê</h1>
+          <div className="flex items-center gap-3">
+            {screenConfig.counterShowLogo && screenConfig.logoUrl && (
+              <img src={screenConfig.logoUrl} alt="Logo" className="h-8 object-contain" />
+            )}
+            <h1 className="text-xl font-bold text-card-foreground">{screenConfig.counterTitle || "Painel do Guichê"}</h1>
+          </div>
           <div className="flex gap-2 items-center">
             <span className="text-sm text-muted-foreground">{user.user_metadata?.full_name || user.email}</span>
             <Link to="/panel"><Button variant="outline" size="sm">Painel</Button></Link>

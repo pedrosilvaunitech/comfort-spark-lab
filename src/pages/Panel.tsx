@@ -2,6 +2,7 @@ import { useRealtimeTickets } from "@/hooks/use-realtime-tickets";
 import { useEffect, useRef, useState } from "react";
 import { getSystemConfig } from "@/lib/ticket-service";
 import { type VoiceSettings, defaultVoiceSettings, formatPrefixForSpeech, formatNumberForSpeech } from "@/components/admin/VoiceConfig";
+import { useScreenConfig } from "@/hooks/use-screen-config";
 
 function parseTicketNumber(displayNumber: string): string {
   const prefix = displayNumber.replace(/[0-9]/g, "");
@@ -44,19 +45,14 @@ function playBeep(): Promise<void> {
 
 function findVoice(settings: VoiceSettings): SpeechSynthesisVoice | null {
   const voices = speechSynthesis.getVoices();
-  
-  // If a specific voice is configured, use it
   if (settings.voiceName) {
     const selected = voices.find((v) => v.name === settings.voiceName);
     if (selected) return selected;
   }
-  
-  // Fallback: best pt-BR voice
   const googleVoice = voices.find(
     (v) => v.lang.startsWith("pt") && v.name.toLowerCase().includes("google")
   );
   if (googleVoice) return googleVoice;
-  
   const ptVoice = voices.find((v) => v.lang.startsWith("pt-BR"));
   return ptVoice || null;
 }
@@ -79,10 +75,8 @@ async function speakTicket(displayNumber: string, counterName: string, settings:
     utterance.lang = "pt-BR";
     utterance.rate = settings.rate;
     utterance.pitch = settings.pitch;
-
     const voice = findVoice(settings);
     if (voice) utterance.voice = voice;
-
     return utterance;
   };
 
@@ -104,6 +98,7 @@ const Panel = () => {
   const lastCalledIdRef = useRef<string | null>(null);
   const [voicesLoaded, setVoicesLoaded] = useState(false);
   const voiceSettingsRef = useRef<VoiceSettings>(defaultVoiceSettings);
+  const { config: screenConfig } = useScreenConfig();
 
   useEffect(() => {
     getSystemConfig("voice_settings").then((data) => {
@@ -135,48 +130,69 @@ const Panel = () => {
   const getServiceTypeName = (ticket: any) => ticket?.service_types?.name || "Convencional";
   const getCounterName = (ticket: any) => ticket?.counters?.name || "Guichê";
 
+  const bgStyle = screenConfig.panelBgColor ? { backgroundColor: screenConfig.panelBgColor } : {};
+  const textStyle = screenConfig.panelTextColor ? { color: screenConfig.panelTextColor } : {};
+  const ticketColorStyle = screenConfig.panelTicketColor ? { color: screenConfig.panelTicketColor } : {};
+
   return (
-    <div className="min-h-screen bg-primary flex flex-col">
+    <div className="min-h-screen bg-primary flex flex-col" style={bgStyle}>
+      {/* Header with logo/title */}
+      {(screenConfig.panelShowLogo && screenConfig.logoUrl) || screenConfig.panelTitle ? (
+        <div className="flex items-center justify-center gap-4 py-4 px-6">
+          {screenConfig.panelShowLogo && screenConfig.logoUrl && (
+            <img src={screenConfig.logoUrl} alt="Logo" className="h-12 object-contain" />
+          )}
+          {screenConfig.panelTitle && (
+            <h1 className="text-2xl font-bold text-primary-foreground" style={textStyle}>
+              {screenConfig.panelTitle}
+            </h1>
+          )}
+        </div>
+      ) : null}
+
       <div className="flex-1 flex flex-col items-center justify-center px-8 py-6">
         {currentCalled ? (
           <div className={`text-center ${lastCalled?.id === currentCalled.id ? "animate-flash-call" : ""}`}>
-            <p className="text-2xl md:text-3xl font-semibold text-primary-foreground/80 italic mb-2">
+            <p className="text-2xl md:text-3xl font-semibold text-primary-foreground/80 italic mb-2" style={textStyle ? { ...textStyle, opacity: 0.8 } : {}}>
               {getServiceTypeName(currentCalled)}
             </p>
             <div className="flex items-center justify-center gap-6 md:gap-10">
-              <span className="text-[8rem] md:text-[12rem] lg:text-[16rem] font-black text-warning leading-none tracking-wider">
+              <span
+                className="text-[8rem] md:text-[12rem] lg:text-[16rem] font-black text-warning leading-none tracking-wider"
+                style={ticketColorStyle}
+              >
                 {currentCalled.display_number}
               </span>
               <div className="text-right">
-                <p className="text-3xl md:text-5xl lg:text-6xl font-bold text-primary-foreground">
+                <p className="text-3xl md:text-5xl lg:text-6xl font-bold text-primary-foreground" style={textStyle}>
                   {getCounterName(currentCalled)}
                 </p>
               </div>
             </div>
           </div>
         ) : (
-          <p className="text-3xl md:text-5xl text-primary-foreground/60 font-semibold">
+          <p className="text-3xl md:text-5xl text-primary-foreground/60 font-semibold" style={textStyle ? { ...textStyle, opacity: 0.6 } : {}}>
             Aguardando chamada...
           </p>
         )}
       </div>
 
-      <div className="bg-primary/80 border-t-4 border-primary-foreground/20">
+      <div className="bg-primary/80 border-t-4 border-primary-foreground/20" style={bgStyle ? { backgroundColor: 'rgba(0,0,0,0.15)' } : {}}>
         <div className="grid grid-cols-4 divide-x divide-primary-foreground/20">
           {recentCalled.length > 0
             ? recentCalled.map((t: any) => (
                 <div key={t.id} className="flex flex-col items-center justify-center py-6 px-2">
-                  <span className="text-5xl md:text-7xl font-black text-primary-foreground tracking-wider">
+                  <span className="text-5xl md:text-7xl font-black text-primary-foreground tracking-wider" style={textStyle}>
                     {t.display_number}
                   </span>
-                  <span className="text-lg md:text-xl font-semibold text-primary-foreground/70 mt-2">
+                  <span className="text-lg md:text-xl font-semibold text-primary-foreground/70 mt-2" style={textStyle ? { ...textStyle, opacity: 0.7 } : {}}>
                     {t.counters?.name || "Guichê"}
                   </span>
                 </div>
               ))
             : Array.from({ length: 4 }).map((_, i) => (
                 <div key={i} className="flex items-center justify-center py-6 px-2">
-                  <span className="text-3xl text-primary-foreground/30">—</span>
+                  <span className="text-3xl text-primary-foreground/30" style={textStyle ? { ...textStyle, opacity: 0.3 } : {}}>—</span>
                 </div>
               ))}
         </div>
