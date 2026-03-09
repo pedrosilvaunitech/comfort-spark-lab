@@ -129,7 +129,7 @@ const Admin = () => {
 
       <main className="container mx-auto p-6">
         <Tabs defaultValue="queue" className="space-y-6">
-          <TabsList className={`grid w-full ${isAdmin ? 'grid-cols-12' : 'grid-cols-2'}`}>
+          <TabsList className="flex flex-wrap h-auto gap-1 w-full">
             <TabsTrigger value="queue" className="gap-1 text-xs"><ListOrdered className="h-3 w-3" /> Fila</TabsTrigger>
             {isAdmin && <TabsTrigger value="counters" className="gap-1 text-xs"><Monitor className="h-3 w-3" /> Guichês</TabsTrigger>}
             {isAdmin && <TabsTrigger value="services" className="gap-1 text-xs"><FileText className="h-3 w-3" /> Serviços</TabsTrigger>}
