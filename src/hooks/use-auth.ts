@@ -38,11 +38,12 @@ export function useAuth() {
   }, []);
 
   const isAdmin = roles.includes("admin");
+  const isGestor = roles.includes("gestor") || isAdmin;
   const isOperator = roles.includes("operator") || isAdmin;
 
   const signOut = async () => {
     await supabase.auth.signOut();
   };
 
-  return { user, loading, roles, isAdmin, isOperator, signOut };
+  return { user, loading, roles, isAdmin, isGestor, isOperator, signOut };
 }

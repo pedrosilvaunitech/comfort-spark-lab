@@ -22,14 +22,14 @@ export function UserManagement() {
   const [newName, setNewName] = useState("");
   const [newEmail, setNewEmail] = useState("");
   const [newPassword, setNewPassword] = useState("");
-  const [newRole, setNewRole] = useState<"admin" | "operator" | "gestor">("operator");
+  const [newRole, setNewRole] = useState<"admin" | "operator" | "gestor" | "gestor">("operator");
   const [creating, setCreating] = useState(false);
 
   // Edit states
   const [editingUser, setEditingUser] = useState<UserWithRole | null>(null);
   const [editName, setEditName] = useState("");
   const [editEmail, setEditEmail] = useState("");
-  const [editRole, setEditRole] = useState<"admin" | "operator">("operator");
+  const [editRole, setEditRole] = useState<"admin" | | "gestor" "operator">("operator");
   const [editPassword, setEditPassword] = useState("");
   const [editOpen, setEditOpen] = useState(false);
   const [saving, setSaving] = useState(false);

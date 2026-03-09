@@ -221,19 +221,26 @@ export async function getPendingPrints() {
   return data;
 }
 
-export async function resetCalledTickets() {
+export async function resetAllTicketsComplete() {
   const today = new Date().toISOString().split("T")[0];
 
   // Reset all counters' current ticket
   await supabase.from("counters").update({ current_ticket_id: null }).neq("id", "00000000-0000-0000-0000-000000000000");
 
-  // Cancel only called/in_service tickets (NOT waiting ones, keep the queue)
+  // Cancel ALL tickets from today (waiting, called, in_service)
   await supabase
     .from("tickets")
     .update({ status: "cancelled", completed_at: new Date().toISOString() })
     .gte("created_at", `${today}T00:00:00`)
-    .in("status", ["called", "in_service"]);
+    .in("status", ["waiting", "called", "in_service"]);
+
+  // Reset daily sequence to 0
+  await supabase
+    .from("daily_sequence")
+    .update({ last_number: 0 })
+    .eq("date", today);
 }
 
-// Keep old name for backward compat but redirect to new behavior
-export const resetAllTickets = resetCalledTickets;
+// Keep old names for backward compat
+export const resetCalledTickets = resetAllTicketsComplete;
+export const resetAllTickets = resetAllTicketsComplete;
