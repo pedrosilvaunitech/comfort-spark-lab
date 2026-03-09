@@ -63,6 +63,7 @@ export function QueueManagement() {
         .update({
           status: "called",
           called_at: new Date().toISOString(),
+          custom_voice_text: customVoiceText || null,
         })
         .eq("id", selectedTicket.id);
 

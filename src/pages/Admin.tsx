@@ -84,7 +84,7 @@ const Admin = () => {
       ticket_number: "test", status: "waiting" as const, patient_name: "Teste de Impressão",
       patient_cpf: "000.000.000-00", created_at: new Date().toISOString(),
       updated_at: new Date().toISOString(), service_type_id: null, counter_id: null,
-      called_at: null, completed_at: null, operator_id: null,
+      called_at: null, completed_at: null, operator_id: null, custom_voice_text: null,
     };
     toast.info(`Testando impressão via ${method}...`);
     let success = false;
