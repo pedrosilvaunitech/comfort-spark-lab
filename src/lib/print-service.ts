@@ -1,5 +1,6 @@
 import { logPrint, getSystemConfig } from "./ticket-service";
 import type { Ticket } from "./ticket-service";
+import { isAndroid, printViaAndroidUsb } from "./native-print";
 
 export interface PrintConfig {
   enabled: boolean;
@@ -31,7 +32,7 @@ export interface TicketLayout {
   lineSpacing: number;
 }
 
-export type PrintMethod = "browser" | "print_server" | "cloud";
+export type PrintMethod = "browser" | "print_server" | "cloud" | "android_usb";
 
 // ============ METHOD 1: Browser Print (window.print) ============
 function buildTicketHtml(ticket: Ticket, layout: TicketLayout, config: PrintConfig): string {
@@ -216,6 +217,36 @@ export async function printViaCloud(ticket: Ticket): Promise<boolean> {
   }
 }
 
+// ============ METHOD 4: Android USB Direct ============
+export async function printViaAndroidUsbMethod(ticket: Ticket): Promise<boolean> {
+  try {
+    const [printerConfig, layoutConfig] = await Promise.all([
+      getSystemConfig("printer"),
+      getSystemConfig("ticket_layout"),
+    ]);
+    const config = printerConfig as unknown as PrintConfig;
+    const layout = layoutConfig as unknown as TicketLayout;
+
+    const success = await printViaAndroidUsb(
+      {
+        displayNumber: ticket.display_number,
+        type: ticket.ticket_type,
+        patientName: ticket.patient_name,
+        patientCpf: ticket.patient_cpf,
+        createdAt: ticket.created_at,
+      },
+      layout,
+      config
+    );
+
+    await logPrint(ticket.id, success ? "success" : "failed", "android_usb", success ? undefined : "USB print failed");
+    return success;
+  } catch (err: any) {
+    await logPrint(ticket.id, "failed", "android_usb", err.message);
+    return false;
+  }
+}
+
 // ============ MAIN PRINT FUNCTION WITH FALLBACK ============
 export async function printTicket(
   ticket: Ticket,
@@ -226,8 +257,12 @@ export async function printTicket(
     return { success: true, method: "disabled" };
   }
 
-  const method = preferredMethod || "browser";
+  // On Android, prioritize USB printing
+  const defaultMethod = isAndroid() ? "android_usb" : "browser";
+  const method = preferredMethod || defaultMethod;
+
   const methods: { name: PrintMethod; fn: () => Promise<boolean> }[] = [
+    ...(isAndroid() ? [{ name: "android_usb" as PrintMethod, fn: () => printViaAndroidUsbMethod(ticket) }] : []),
     { name: "browser", fn: () => printViaBrowser(ticket) },
     { name: "print_server", fn: () => printViaPrintServer(ticket) },
     { name: "cloud", fn: () => printViaCloud(ticket) },
