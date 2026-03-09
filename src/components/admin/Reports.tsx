@@ -197,13 +197,62 @@ export function Reports() {
     { name: "Cancelados", value: stats.cancelled },
   ].filter((d) => d.value > 0);
 
+  const isMultiDay = format(dateFrom, "yyyy-MM-dd") !== format(dateTo, "yyyy-MM-dd");
+  const periodLabel = preset === "today" ? "Hoje" : preset === "yesterday" ? "Ontem"
+    : preset === "week" ? "Esta Semana" : preset === "month" ? "Este Mês"
+    : `${format(dateFrom, "dd/MM/yyyy")} - ${format(dateTo, "dd/MM/yyyy")}`;
+
   return (
     <div className="space-y-6">
-      <div className="flex justify-between items-center">
-        <h2 className="text-lg font-bold text-foreground">Relatório do Dia</h2>
-        <Button onClick={loadStats} variant="outline" size="sm" disabled={loading}>
-          <RefreshCw className={`h-4 w-4 mr-2 ${loading ? "animate-spin" : ""}`} /> Atualizar
+      {/* Filter Bar */}
+      <div className="flex flex-wrap items-center gap-2">
+        <h2 className="text-lg font-bold text-foreground mr-2">Relatórios</h2>
+        {(["today", "yesterday", "week", "month"] as DatePreset[]).map((p) => (
+          <Button
+            key={p}
+            variant={preset === p ? "default" : "outline"}
+            size="sm"
+            onClick={() => applyPreset(p)}
+          >
+            {p === "today" ? "Hoje" : p === "yesterday" ? "Ontem" : p === "week" ? "Semana" : "Mês"}
+          </Button>
+        ))}
+
+        <Popover>
+          <PopoverTrigger asChild>
+            <Button variant={preset === "custom" ? "default" : "outline"} size="sm">
+              <CalendarIcon className="h-4 w-4 mr-1" />
+              {preset === "custom" ? `${format(dateFrom, "dd/MM")} - ${format(dateTo, "dd/MM")}` : "Período"}
+            </Button>
+          </PopoverTrigger>
+          <PopoverContent className="w-auto p-4 space-y-3" align="end">
+            <div className="space-y-2">
+              <p className="text-sm font-medium">De:</p>
+              <Calendar
+                mode="single"
+                selected={dateFrom}
+                onSelect={(d) => d && setDateFrom(d)}
+                locale={ptBR}
+                className={cn("p-3 pointer-events-auto")}
+              />
+              <p className="text-sm font-medium">Até:</p>
+              <Calendar
+                mode="single"
+                selected={dateTo}
+                onSelect={(d) => d && setDateTo(d)}
+                locale={ptBR}
+                className={cn("p-3 pointer-events-auto")}
+              />
+            </div>
+            <Button onClick={handleCustomRange} className="w-full" size="sm">Filtrar</Button>
+          </PopoverContent>
+        </Popover>
+
+        <Button onClick={loadStats} variant="ghost" size="sm" disabled={loading}>
+          <RefreshCw className={`h-4 w-4 ${loading ? "animate-spin" : ""}`} />
         </Button>
+
+        <span className="text-sm text-muted-foreground ml-auto">{periodLabel}</span>
       </div>
 
       {/* Summary Cards */}
