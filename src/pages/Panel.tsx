@@ -128,7 +128,8 @@ const Panel = () => {
       lastCalledIdRef.current = lastCalled.id;
       const counterName = (lastCalled as any).counters?.name || "guichê";
       const customText = (lastCalled as any).custom_voice_text;
-      if (customText) {
+      console.log("[Panel] lastCalled ticket:", lastCalled.id, "custom_voice_text:", customText);
+      if (customText && customText.trim().length > 0) {
         // Use custom voice text directly
         speechSynthesis.cancel();
         const settings = voiceSettingsRef.current;
