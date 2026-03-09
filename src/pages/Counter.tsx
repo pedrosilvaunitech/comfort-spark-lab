@@ -183,7 +183,12 @@ const CounterPage = () => {
     <div className="min-h-screen bg-background">
       <header className="bg-card border-b border-border p-4">
         <div className="container mx-auto flex items-center justify-between">
-          <h1 className="text-xl font-bold text-card-foreground">Painel do Guichê</h1>
+          <div className="flex items-center gap-3">
+            {screenConfig.counterShowLogo && screenConfig.logoUrl && (
+              <img src={screenConfig.logoUrl} alt="Logo" className="h-8 object-contain" />
+            )}
+            <h1 className="text-xl font-bold text-card-foreground">{screenConfig.counterTitle || "Painel do Guichê"}</h1>
+          </div>
           <div className="flex gap-2 items-center">
             <span className="text-sm text-muted-foreground">{user.user_metadata?.full_name || user.email}</span>
             <Link to="/panel"><Button variant="outline" size="sm">Painel</Button></Link>
