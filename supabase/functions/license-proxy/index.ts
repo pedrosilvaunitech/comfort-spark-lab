@@ -110,9 +110,26 @@ serve(async (req) => {
         targetUrl = `${EXTERNAL_API}/license?activation_key=${encodeURIComponent(activation_key)}`;
         break;
 
-      case 'get_payments':
+      case 'get_payments': {
         targetUrl = `${EXTERNAL_API}/payments?activation_key=${encodeURIComponent(activation_key)}`;
-        break;
+        const payRes = await fetch(targetUrl, { method: 'GET', headers });
+        if (!payRes.ok) {
+          const errText = await payRes.text().catch(() => '');
+          console.error('[license-proxy] payments error:', payRes.status, errText);
+          return new Response(JSON.stringify({ error: `Falha (${payRes.status}): ${errText}` }), {
+            status: payRes.status, headers: { ...corsHeaders, 'Content-Type': 'application/json' },
+          });
+        }
+        const payData = await payRes.json();
+        console.log('[license-proxy] payments response keys:', JSON.stringify(Object.keys(payData)));
+        if (payData.payments?.length > 0) {
+          console.log('[license-proxy] first payment keys:', JSON.stringify(Object.keys(payData.payments[0])));
+          console.log('[license-proxy] first payment sample:', JSON.stringify(payData.payments[0]));
+        }
+        return new Response(JSON.stringify(payData), {
+          headers: { ...corsHeaders, 'Content-Type': 'application/json' },
+        });
+      }
 
       case 'get_pix':
         if (!payment_id) {
