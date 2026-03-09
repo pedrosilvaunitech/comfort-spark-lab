@@ -41,11 +41,26 @@ export function QueueManagement() {
     loadQueue();
 
     const channel = supabase
-      .channel("admin-queue")
-      .on("postgres_changes", { event: "*", schema: "public", table: "tickets" }, () => loadQueue())
-      .subscribe();
+      .channel("admin-queue-" + Date.now())
+      .on("postgres_changes", { event: "*", schema: "public", table: "tickets" }, () => {
+        console.log("[QueueManagement] ticket change detected, refreshing...");
+        loadQueue();
+      })
+      .on("postgres_changes", { event: "*", schema: "public", table: "counters" }, () => {
+        console.log("[QueueManagement] counter change detected, refreshing...");
+        loadQueue();
+      })
+      .subscribe((status) => {
+        console.log("[QueueManagement] realtime status:", status);
+      });
 
-    return () => { supabase.removeChannel(channel); };
+    // Also poll every 10 seconds as fallback
+    const interval = setInterval(loadQueue, 10000);
+
+    return () => {
+      supabase.removeChannel(channel);
+      clearInterval(interval);
+    };
   }, [loadQueue]);
 
   const openCallDialog = (ticket: any) => {
