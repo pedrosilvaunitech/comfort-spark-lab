@@ -1,10 +1,10 @@
 import React, { createContext, useContext, useState, useEffect, useCallback } from "react";
 import { getLicense, getPayments, getPixImage, getBoletoPdf, getStoredConfig } from "@/services/licenseApi";
-import { Dialog, DialogContent } from "@/components/ui/dialog";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
-import { AlertTriangle, RefreshCw, QrCode, FileText, Copy, Check } from "lucide-react";
+import { AlertTriangle, RefreshCw, QrCode, FileText, Copy, Check, Key } from "lucide-react";
 import { toast } from "sonner";
+import { useLocation, useNavigate } from "react-router-dom";
 
 interface LicenseContextType {
   license: any | null;
@@ -26,6 +26,13 @@ const LicenseContext = createContext<LicenseContextType>({
 
 export const useLicense = () => useContext(LicenseContext);
 
+// Routes that are ALLOWED even when blocked
+const ALLOWED_ROUTES = ['/admin', '/login', '/license-settings', '/financeiro', '/suporte', '/setup'];
+
+function isRouteAllowed(pathname: string): boolean {
+  return ALLOWED_ROUTES.some(r => pathname.startsWith(r));
+}
+
 export function LicenseProvider({ children }: { children: React.ReactNode }) {
   const [license, setLicense] = useState<any>(null);
   const [payments, setPayments] = useState<any[]>([]);
@@ -41,10 +48,14 @@ export function LicenseProvider({ children }: { children: React.ReactNode }) {
   const [copied, setCopied] = useState(false);
   const [checking, setChecking] = useState(false);
 
+  const location = useLocation();
+  const navigate = useNavigate();
+
   const checkLicense = useCallback(async () => {
     const config = getStoredConfig();
     if (!config.apiKey || !config.activationKey) {
       setIsConfigured(false);
+      setIsBlocked(false);
       return;
     }
     setIsConfigured(true);
@@ -62,7 +73,6 @@ export function LicenseProvider({ children }: { children: React.ReactNode }) {
       setPayments(payRes.payments || []);
       setSummary(payRes.summary || null);
 
-      // Check inadimplência
       const now = new Date();
       const overdue = (payRes.payments || []).filter((p: any) => {
         if (p.status !== 'overdue') return false;
@@ -97,9 +107,16 @@ export function LicenseProvider({ children }: { children: React.ReactNode }) {
 
   useEffect(() => {
     checkLicense();
-    const interval = setInterval(checkLicense, 60 * 60 * 1000); // 1 hour
+    const interval = setInterval(checkLicense, 60 * 60 * 1000);
     return () => clearInterval(interval);
   }, [checkLicense]);
+
+  // Redirect blocked users away from operational routes
+  useEffect(() => {
+    if (isBlocked && !isRouteAllowed(location.pathname)) {
+      // Don't redirect, just show block screen in place
+    }
+  }, [isBlocked, location.pathname]);
 
   const handlePix = async (paymentId: string) => {
     const config = getStoredConfig();
@@ -128,22 +145,24 @@ export function LicenseProvider({ children }: { children: React.ReactNode }) {
     }
   };
 
+  // If blocked and on a non-allowed route, render fullscreen block instead of children
+  const shouldBlock = isBlocked && !isRouteAllowed(location.pathname);
+
   return (
     <LicenseContext.Provider value={{ license, payments, summary, isBlocked, blockReason, inadimplente, diasTolerancia, isConfigured, checkLicense }}>
-      {children}
-
-      {/* Blocking Modal */}
-      <Dialog open={isBlocked} onOpenChange={() => {}}>
-        <DialogContent className="max-w-lg [&>button]:hidden" onPointerDownOutside={e => e.preventDefault()} onEscapeKeyDown={e => e.preventDefault()}>
-          <div className="flex flex-col items-center gap-4 py-4">
-            <div className="h-16 w-16 rounded-full bg-destructive/10 flex items-center justify-center">
-              <AlertTriangle className="h-8 w-8 text-destructive" />
+      {shouldBlock ? (
+        <div className="fixed inset-0 z-[9999] bg-background flex items-center justify-center p-4">
+          <div className="max-w-lg w-full space-y-6">
+            <div className="flex flex-col items-center gap-4">
+              <div className="h-20 w-20 rounded-full bg-destructive/10 flex items-center justify-center">
+                <AlertTriangle className="h-10 w-10 text-destructive" />
+              </div>
+              <h1 className="text-2xl font-bold text-foreground text-center">Sistema Bloqueado</h1>
+              <p className="text-muted-foreground text-center">{blockReason}</p>
             </div>
-            <h2 className="text-xl font-bold text-foreground text-center">Sistema Bloqueado</h2>
-            <p className="text-muted-foreground text-center text-sm">{blockReason}</p>
 
             {inadimplente && overduePayments.length > 0 && (
-              <div className="w-full space-y-2 mt-2">
+              <div className="space-y-2">
                 <p className="text-sm font-semibold text-foreground">Pagamentos vencidos:</p>
                 {overduePayments.map((p: any) => (
                   <div key={p.id} className="flex items-center justify-between bg-destructive/5 border border-destructive/20 rounded-lg p-3">
@@ -165,25 +184,39 @@ export function LicenseProvider({ children }: { children: React.ReactNode }) {
             )}
 
             {pixData && (
-              <div className="w-full bg-card border border-border rounded-lg p-4 flex flex-col items-center gap-2">
+              <div className="bg-card border border-border rounded-lg p-4 flex flex-col items-center gap-2">
                 <img src={pixData.imageUrl} alt="QR Code PIX" className="w-48 h-48" />
                 {pixData.pixCode && (
-                  <Button variant="outline" size="sm" onClick={handleCopyPix}>
-                    {copied ? <Check className="h-3 w-3 mr-1" /> : <Copy className="h-3 w-3 mr-1" />}
-                    {copied ? "Copiado!" : "Copiar código PIX"}
-                  </Button>
+                  <>
+                    <p className="text-xs text-muted-foreground break-all text-center">{pixData.pixCode}</p>
+                    <Button variant="outline" size="sm" onClick={handleCopyPix}>
+                      {copied ? <Check className="h-3 w-3 mr-1" /> : <Copy className="h-3 w-3 mr-1" />}
+                      {copied ? "Copiado!" : "Copiar código PIX"}
+                    </Button>
+                  </>
                 )}
                 <Button variant="ghost" size="sm" onClick={() => setPixData(null)}>Fechar</Button>
               </div>
             )}
 
-            <Button onClick={checkLicense} disabled={checking} className="w-full mt-2">
-              <RefreshCw className={`h-4 w-4 mr-2 ${checking ? 'animate-spin' : ''}`} />
-              Verificar Novamente
-            </Button>
+            <div className="flex flex-col gap-2">
+              <Button onClick={() => { checkLicense(); }} disabled={checking} className="w-full">
+                <RefreshCw className={`h-4 w-4 mr-2 ${checking ? 'animate-spin' : ''}`} />
+                Verificar Novamente
+              </Button>
+              <Button variant="outline" onClick={() => navigate('/license-settings')} className="w-full">
+                <Key className="h-4 w-4 mr-2" /> Configuração de Licença
+              </Button>
+              <Button variant="outline" onClick={() => navigate('/financeiro')} className="w-full">
+                <FileText className="h-4 w-4 mr-2" /> Ir para Financeiro
+              </Button>
+              <Button variant="ghost" onClick={() => navigate('/admin')} className="w-full text-xs">
+                Painel Admin
+              </Button>
+            </div>
           </div>
-        </DialogContent>
-      </Dialog>
+        </div>
+      ) : children}
     </LicenseContext.Provider>
   );
 }
