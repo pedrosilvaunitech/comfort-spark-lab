@@ -52,9 +52,13 @@ export function LicenseProvider({ children }: { children: React.ReactNode }) {
   const navigate = useNavigate();
 
   const checkLicense = useCallback(async () => {
-    const config = getStoredConfig();
-    setDiasTolerancia(config.toleranciaDiasAtraso);
     setChecking(true);
+
+    try {
+      // Get config from DB
+      const serverConfig = await getConfigFromServer();
+      setDiasTolerancia(serverConfig.tolerancia_dias);
+      setIsConfigured(serverConfig.configured);
 
     try {
       const [licRes, payRes] = await Promise.all([
