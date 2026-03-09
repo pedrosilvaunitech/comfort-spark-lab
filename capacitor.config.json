@@ -1,0 +1,20 @@
+{
+  "appId": "app.lovable.7b1c58172b51459d8337d4f4e33dcb33",
+  "appName": "comfort-spark-lab",
+  "webDir": "dist",
+  "server": {
+    "url": "https://7b1c5817-2b51-459d-8337-d4f4e33dcb33.lovableproject.com?forceHideBadge=true",
+    "cleartext": true
+  },
+  "plugins": {
+    "StatusBar": {
+      "style": "DARK",
+      "backgroundColor": "#000000"
+    }
+  },
+  "android": {
+    "allowMixedContent": true,
+    "captureInput": true,
+    "webContentsDebuggingEnabled": false
+  }
+}
