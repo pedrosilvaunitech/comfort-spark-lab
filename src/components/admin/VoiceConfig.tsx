@@ -81,7 +81,6 @@ export function formatTicketForSpeech(displayNumber: string, settings: VoiceSett
   const number = formatNumberForSpeech(displayNumber, settings);
   return prefix ? `${prefix} ${number}` : number;
 }
-}
 
 export function VoiceConfig() {
   const [settings, setSettings] = useState<VoiceSettings>(defaultVoiceSettings);
