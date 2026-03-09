@@ -35,6 +35,7 @@ export const defaultVoiceSettings: VoiceSettings = {
   numberFormat: "no_zeros",
   prefixFormat: "senha",
   customPrefix: "",
+  speakPrefix: true,
 };
 
 export function formatTicketForSpeech(displayNumber: string, settings: VoiceSettings): string {
