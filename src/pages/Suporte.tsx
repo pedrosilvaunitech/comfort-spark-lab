@@ -80,10 +80,9 @@ const Suporte = () => {
 
   const handleCreate = async () => {
     if (!newSubject.trim() || !newMessage.trim()) return;
-    const config = getStoredConfig();
     setCreating(true);
     try {
-      await createTicket(config.activationKey, newSubject, newMessage, newPriority);
+      await createTicket(newSubject, newMessage, newPriority);
       toast.success("Ticket criado!");
       setNewTicketOpen(false);
       setNewSubject(''); setNewMessage(''); setNewPriority('normal');

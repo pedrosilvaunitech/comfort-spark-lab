@@ -120,19 +120,17 @@ export function LicenseProvider({ children }: { children: React.ReactNode }) {
   }, [isBlocked, location.pathname]);
 
   const handlePix = async (paymentId: string) => {
-    const config = getStoredConfig();
     setPixLoading(true);
     try {
-      const data = await getPixImage(paymentId, config.activationKey);
+      const data = await getPixImage(paymentId);
       setPixData(data);
     } catch { toast.error("Falha ao gerar PIX"); }
     finally { setPixLoading(false); }
   };
 
   const handleBoleto = async (paymentId: string) => {
-    const config = getStoredConfig();
     try {
-      const url = await getBoletoPdf(paymentId, config.activationKey);
+      const url = await getBoletoPdf(paymentId);
       window.open(url, '_blank');
     } catch { toast.error("Falha ao gerar boleto"); }
   };

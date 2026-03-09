@@ -4,7 +4,7 @@ import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Badge } from "@/components/ui/badge";
-import { getStoredConfig, saveConfig, getLicense, type LicenseConfig } from "@/services/licenseApi";
+import { getStoredConfig, saveConfigLocal, saveKeysToServer, type LicenseConfig } from "@/services/licenseApi";
 import { useLicense } from "@/contexts/LicenseContext";
 import { useAuth } from "@/hooks/use-auth";
 import { Navigate, Link } from "react-router-dom";
@@ -16,24 +16,39 @@ const LicenseSettings = () => {
   const { license, checkLicense } = useLicense();
   const [config, setConfig] = useState<LicenseConfig>({ apiKey: '', activationKey: '', toleranciaDiasAtraso: 5 });
   const [testing, setTesting] = useState(false);
+  const [saving, setSaving] = useState(false);
   const [testResult, setTestResult] = useState<any>(null);
 
   useEffect(() => { setConfig(getStoredConfig()); }, []);
 
-  const handleSave = () => {
-    saveConfig(config);
-    toast.success("Configuração salva!");
-    checkLicense();
+  const handleSave = async () => {
+    setSaving(true);
+    try {
+      // Save tolerance locally
+      saveConfigLocal(config);
+      // Save keys to server (secure)
+      const result = await saveKeysToServer(config.apiKey, config.activationKey);
+      if (result.license) setTestResult(result.license);
+      toast.success("Configuração salva com segurança!");
+      checkLicense();
+    } catch (err: any) {
+      toast.error(err.message || "Falha ao salvar");
+    } finally { setSaving(false); }
   };
 
   const handleTest = async () => {
     setTesting(true);
     setTestResult(null);
     try {
-      saveConfig(config); // save temp so API can use it
-      const res = await getLicense(config.activationKey);
-      setTestResult(res.license);
-      toast.success("Conexão OK!");
+      // Save keys first then test via proxy
+      const result = await saveKeysToServer(config.apiKey, config.activationKey);
+      saveConfigLocal(config);
+      if (result.license) {
+        setTestResult(result.license);
+        toast.success("Conexão OK!");
+      } else if (result.warning) {
+        toast.warning(result.warning);
+      }
     } catch (err: any) {
       toast.error(err.message || "Falha na conexão");
       setTestResult(null);
@@ -62,20 +77,21 @@ const LicenseSettings = () => {
         <Card>
           <CardHeader>
             <CardTitle>Credenciais</CardTitle>
-            <CardDescription>Configure a conexão com o sistema de licenças</CardDescription>
+            <CardDescription>As chaves são armazenadas com segurança no servidor</CardDescription>
           </CardHeader>
           <CardContent className="space-y-4">
             <div><Label>API Key</Label><Input type="password" value={config.apiKey} onChange={e => setConfig({ ...config, apiKey: e.target.value })} placeholder="Sua API Key" /></div>
-            <div><Label>Chave de Ativação</Label><Input value={config.activationKey} onChange={e => setConfig({ ...config, activationKey: e.target.value })} placeholder="Sua chave de ativação" /></div>
+            <div><Label>Chave de Ativação</Label><Input type="password" value={config.activationKey} onChange={e => setConfig({ ...config, activationKey: e.target.value })} placeholder="Sua chave de ativação" /></div>
             <div><Label>Tolerância de Atraso (dias)</Label><Input type="number" min={0} value={config.toleranciaDiasAtraso} onChange={e => setConfig({ ...config, toleranciaDiasAtraso: Number(e.target.value) })} /></div>
             <div className="flex gap-2">
               <Button onClick={handleTest} disabled={testing || !config.apiKey || !config.activationKey} variant="outline" className="flex-1">
                 <TestTube className="h-4 w-4 mr-2" />{testing ? "Testando..." : "Testar Conexão"}
               </Button>
-              <Button onClick={handleSave} className="flex-1">
-                <Save className="h-4 w-4 mr-2" /> Salvar
+              <Button onClick={handleSave} disabled={saving} className="flex-1">
+                <Save className="h-4 w-4 mr-2" />{saving ? "Salvando..." : "Salvar"}
               </Button>
             </div>
+            <p className="text-xs text-muted-foreground">🔒 As chaves são enviadas ao servidor e nunca ficam expostas no navegador.</p>
           </CardContent>
         </Card>
 
@@ -110,7 +126,6 @@ const LicenseSettings = () => {
                   <p className="text-sm text-muted-foreground">{displayLicense.days_remaining ?? displayLicense.daysRemaining} dias restantes</p>
                 )}
                 {displayLicense.plan && <p className="text-sm text-muted-foreground">Plano: {displayLicense.plan}</p>}
-
 
                 <div className="border-t border-border pt-3 mt-3">
                   <Link to="/financeiro"><Button variant="outline" className="w-full"><DollarSign className="h-4 w-4 mr-2" /> Ver Pagamentos / Financeiro</Button></Link>

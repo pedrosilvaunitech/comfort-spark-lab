@@ -21,21 +21,13 @@ const Financeiro = () => {
   if (!user) return <Navigate to="/login" />;
 
   const handlePix = async (paymentId: string) => {
-    const config = getStoredConfig();
-    if (!config.apiKey || !config.activationKey) {
-      toast.error("Licença não configurada");
-      return;
-    }
     if (!paymentId || paymentId.startsWith('unknown')) {
-      toast.error("ID do pagamento não encontrado. Verifique os dados da API.");
-      console.error('[Financeiro] Payment ID inválido. Payments disponíveis:', JSON.stringify(payments.slice(0, 2)));
+      toast.error("ID do pagamento não encontrado.");
       return;
     }
     setPixLoading(paymentId);
     try {
-      console.log('[Financeiro] Gerando PIX para payment:', paymentId);
-      const data = await getPixImage(paymentId, config.activationKey);
-      console.log('[Financeiro] PIX data received:', data);
+      const data = await getPixImage(paymentId);
       setPixData(data);
     } catch (err: any) {
       console.error('[Financeiro] PIX error:', err);
@@ -46,20 +38,12 @@ const Financeiro = () => {
   };
 
   const handleBoleto = async (paymentId: string) => {
-    const config = getStoredConfig();
-    if (!config.apiKey || !config.activationKey) {
-      toast.error("Licença não configurada");
-      return;
-    }
     if (!paymentId || paymentId.startsWith('unknown')) {
-      toast.error("ID do pagamento não encontrado. Verifique os dados da API.");
-      console.error('[Financeiro] Payment ID inválido. Payments disponíveis:', JSON.stringify(payments.slice(0, 2)));
+      toast.error("ID do pagamento não encontrado.");
       return;
     }
     try {
-      console.log('[Financeiro] Gerando boleto para payment:', paymentId);
-      const url = await getBoletoPdf(paymentId, config.activationKey);
-      console.log('[Financeiro] Boleto URL:', url);
+      const url = await getBoletoPdf(paymentId);
       window.open(url, '_blank');
     } catch (err: any) {
       console.error('[Financeiro] Boleto error:', err);
