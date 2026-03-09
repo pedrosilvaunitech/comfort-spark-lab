@@ -359,9 +359,7 @@ export function VoiceConfig() {
           <div className="bg-muted rounded-lg p-4">
             <p className="text-sm font-medium mb-1">Frase que será dita:</p>
             <p className="text-lg font-mono">
-              {settings.template
-                .replace("{senha}", "N 1")
-                .replace("{guiche}", "Guichê 1")}
+              {getPreviewTextFull()}
             </p>
           </div>
           <div className="bg-muted rounded-lg p-4">
@@ -369,6 +367,14 @@ export function VoiceConfig() {
             <p className="text-sm">
               {settings.voiceName || "Automático (melhor pt-BR)"}
             </p>
+          </div>
+          <div className="bg-muted rounded-lg p-4">
+            <p className="text-sm font-medium mb-1">Exemplos de como soa:</p>
+            <ul className="text-sm space-y-1 text-muted-foreground">
+              <li>N0001 → "{formatTicketForSpeech("N0001", settings)}"</li>
+              <li>E0015 → "{formatTicketForSpeech("E0015", settings)}"</li>
+              <li>P1002 → "{formatTicketForSpeech("P1002", settings)}"</li>
+            </ul>
           </div>
           <Button onClick={handleTestVoice} variant="outline" className="w-full">
             <Volume2 className="h-4 w-4 mr-2" />
