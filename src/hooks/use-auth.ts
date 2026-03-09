@@ -1,4 +1,4 @@
-import { useState, useEffect, useRef } from "react";
+import { useState, useEffect, useRef, useCallback } from "react";
 import { supabase } from "@/integrations/supabase/client";
 import type { User } from "@supabase/supabase-js";
 
@@ -7,40 +7,46 @@ export function useAuth() {
   const [loading, setLoading] = useState(true);
   const [roles, setRoles] = useState<string[]>([]);
   const initializedRef = useRef(false);
+  const mountedRef = useRef(true);
 
-  const fetchRoles = async (userId: string) => {
+  const fetchRoles = useCallback(async (userId: string): Promise<string[]> => {
     try {
-      const { data } = await supabase
+      const { data, error } = await supabase
         .from("user_roles")
         .select("role")
         .eq("user_id", userId);
+      if (error) {
+        console.error("[Auth] fetchRoles error:", error);
+        return [];
+      }
       return data?.map((r) => r.role) || [];
     } catch {
       return [];
     }
-  };
+  }, []);
 
   useEffect(() => {
-    let cancelled = false;
+    mountedRef.current = true;
 
     const initialize = async () => {
       try {
-        const { data: { session } } = await supabase.auth.getSession();
-        if (cancelled) return;
-        
+        const { data: { session }, error } = await supabase.auth.getSession();
+        if (!mountedRef.current) return;
+        if (error) console.error("[Auth] getSession error:", error);
+
         const currentUser = session?.user ?? null;
         setUser(currentUser);
-        
+
         if (currentUser) {
           const userRoles = await fetchRoles(currentUser.id);
-          if (!cancelled) setRoles(userRoles);
+          if (mountedRef.current) setRoles(userRoles);
         } else {
           setRoles([]);
         }
-      } catch {
-        // ignore
+      } catch (err) {
+        console.error("[Auth] init error:", err);
       } finally {
-        if (!cancelled) {
+        if (mountedRef.current) {
           setLoading(false);
           initializedRef.current = true;
         }
@@ -49,22 +55,32 @@ export function useAuth() {
 
     initialize();
 
+    // Safety timeout: force loading=false after 5s
+    const timeout = setTimeout(() => {
+      if (mountedRef.current && loading) {
+        console.warn("[Auth] Timeout - forcing loading=false");
+        setLoading(false);
+        initializedRef.current = true;
+      }
+    }, 5000);
+
     const { data: { subscription } } = supabase.auth.onAuthStateChange(async (_event, session) => {
-      if (!initializedRef.current) return; // Skip until initial load done
-      
+      if (!initializedRef.current || !mountedRef.current) return;
+
       const currentUser = session?.user ?? null;
       setUser(currentUser);
-      
+
       if (currentUser) {
         const userRoles = await fetchRoles(currentUser.id);
-        if (!cancelled) setRoles(userRoles);
+        if (mountedRef.current) setRoles(userRoles);
       } else {
-        setRoles([]);
+        if (mountedRef.current) setRoles([]);
       }
     });
 
     return () => {
-      cancelled = true;
+      mountedRef.current = false;
+      clearTimeout(timeout);
       subscription.unsubscribe();
     };
   }, []);
