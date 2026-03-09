@@ -66,10 +66,9 @@ const Suporte = () => {
 
   const handleSend = async () => {
     if (!newMsg.trim() || !selectedTicket) return;
-    const config = getStoredConfig();
     setSending(true);
     try {
-      await sendMessage(selectedTicket.id, config.activationKey, newMsg);
+      await sendMessage(selectedTicket.id, newMsg);
       setNewMsg('');
       await loadMessages(selectedTicket.id);
     } catch (err: any) {
