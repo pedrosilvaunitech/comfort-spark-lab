@@ -137,6 +137,7 @@ serve(async (req) => {
             status: 400, headers: { ...corsHeaders, 'Content-Type': 'application/json' },
           });
         }
+        console.log('[license-proxy] get_pix for payment_id:', payment_id);
         targetUrl = `${EXTERNAL_API}/payments/${encodeURIComponent(payment_id)}/pix?activation_key=${encodeURIComponent(activation_key)}`;
         break;
 
