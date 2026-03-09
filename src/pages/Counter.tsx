@@ -254,18 +254,7 @@ const CounterPage = () => {
                       <span className="font-bold text-foreground">{t.display_number}</span>
                       <span className="text-sm text-muted-foreground">{t.service_types?.name}</span>
                     </div>
-                    <div className="flex items-center gap-2">
-                      <span className="text-xs text-muted-foreground">{new Date(t.created_at).toLocaleTimeString("pt-BR", { hour: "2-digit", minute: "2-digit" })}</span>
-                      <Button
-                        size="sm"
-                        variant="ghost"
-                        disabled={loading || !selectedCounterId}
-                        onClick={() => handleCallSpecific(t.id)}
-                        title="Chamar esta senha"
-                      >
-                        <PhoneCall className="h-3.5 w-3.5" />
-                      </Button>
-                    </div>
+                    <span className="text-xs text-muted-foreground">{new Date(t.created_at).toLocaleTimeString("pt-BR", { hour: "2-digit", minute: "2-digit" })}</span>
                   </div>
                 ))}
                 {waitingTickets.length === 0 && <p className="text-sm text-muted-foreground text-center py-8">Fila vazia</p>}

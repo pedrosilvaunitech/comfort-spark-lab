@@ -27,11 +27,12 @@ import { VoiceConfig } from "@/components/admin/VoiceConfig";
 import { QueueManagement } from "@/components/admin/QueueManagement";
 import { TotemConfig } from "@/components/admin/TotemConfig";
 import { ScreenConfigPanel } from "@/components/admin/ScreenConfig";
+import { PriorityConfig } from "@/components/admin/PriorityConfig";
 import { toast } from "sonner";
 import { Link, Navigate } from "react-router-dom";
 import {
   Printer, Settings, FileText, History, RefreshCw, Save, TestTube,
-  LayoutTemplate, Users, Monitor, BarChart3, LogOut, Trash2, Volume2, ListOrdered, Tablet, Palette,
+  LayoutTemplate, Users, Monitor, BarChart3, LogOut, Trash2, Volume2, ListOrdered, Tablet, Palette, ShieldAlert,
 } from "lucide-react";
 
 const Admin = () => {
@@ -126,10 +127,11 @@ const Admin = () => {
 
       <main className="container mx-auto p-6">
         <Tabs defaultValue="queue" className="space-y-6">
-          <TabsList className={`grid w-full ${isAdmin ? 'grid-cols-11' : 'grid-cols-2'}`}>
+          <TabsList className={`grid w-full ${isAdmin ? 'grid-cols-12' : 'grid-cols-2'}`}>
             <TabsTrigger value="queue" className="gap-1 text-xs"><ListOrdered className="h-3 w-3" /> Fila</TabsTrigger>
             {isAdmin && <TabsTrigger value="counters" className="gap-1 text-xs"><Monitor className="h-3 w-3" /> Guichês</TabsTrigger>}
             {isAdmin && <TabsTrigger value="services" className="gap-1 text-xs"><FileText className="h-3 w-3" /> Serviços</TabsTrigger>}
+            {isAdmin && <TabsTrigger value="priority" className="gap-1 text-xs"><ShieldAlert className="h-3 w-3" /> Prioridade</TabsTrigger>}
             {isAdmin && <TabsTrigger value="users" className="gap-1 text-xs"><Users className="h-3 w-3" /> Usuários</TabsTrigger>}
             {isAdmin && <TabsTrigger value="totem" className="gap-1 text-xs"><Tablet className="h-3 w-3" /> Totem</TabsTrigger>}
             {isAdmin && <TabsTrigger value="screens" className="gap-1 text-xs"><Palette className="h-3 w-3" /> Telas</TabsTrigger>}
@@ -141,6 +143,7 @@ const Admin = () => {
           </TabsList>
 
           <TabsContent value="queue"><QueueManagement /></TabsContent>
+          {isAdmin && <TabsContent value="priority"><PriorityConfig /></TabsContent>}
           {isAdmin && <TabsContent value="counters"><CounterManagement /></TabsContent>}
           {isAdmin && <TabsContent value="services"><ServiceTypeManagement /></TabsContent>}
           {isAdmin && <TabsContent value="users"><UserManagement /></TabsContent>}
