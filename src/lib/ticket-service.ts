@@ -35,7 +35,6 @@ export async function generateTicket(
 ): Promise<Ticket> {
   const today = new Date().toISOString().split("T")[0];
 
-  // Get or create daily sequence (shared across all service types)
   const { data: seq } = await supabase
     .from("daily_sequence")
     .select("*")
@@ -46,18 +45,12 @@ export async function generateTicket(
   let nextNumber: number;
   if (seq) {
     nextNumber = seq.last_number + 1;
-    await supabase
-      .from("daily_sequence")
-      .update({ last_number: nextNumber })
-      .eq("id", seq.id);
+    await supabase.from("daily_sequence").update({ last_number: nextNumber }).eq("id", seq.id);
   } else {
     nextNumber = 1;
-    await supabase
-      .from("daily_sequence")
-      .insert({ date: today, service_type_id: null, last_number: 1 });
+    await supabase.from("daily_sequence").insert({ date: today, service_type_id: null, last_number: 1 });
   }
 
-  // Get service type prefix
   const { data: serviceType } = await supabase
     .from("service_types")
     .select("prefix")
@@ -86,41 +79,29 @@ export async function generateTicket(
 }
 
 export async function callNextTicket(counterId: string): Promise<Ticket | null> {
-  // Get counter info
-  const { data: counter } = await supabase
-    .from("counters")
-    .select("*")
-    .eq("id", counterId)
-    .single();
+  const { data: counter } = await supabase.from("counters").select("*").eq("id", counterId).single();
   if (!counter) throw new Error("Guichê não encontrado");
 
-  // Complete current ticket if any
   if (counter.current_ticket_id) {
-    await supabase
-      .from("tickets")
+    await supabase.from("tickets")
       .update({ status: "completed", completed_at: new Date().toISOString() })
       .eq("id", counter.current_ticket_id);
   }
 
-  // Get next waiting ticket (priority first, then by creation time)
   const { data: nextTicket } = await supabase
     .from("tickets")
     .select("*")
     .eq("status", "waiting")
-    .order("ticket_type", { ascending: true }) // priority < normal alphabetically
+    .order("ticket_type", { ascending: true })
     .order("created_at", { ascending: true })
     .limit(1)
     .single();
 
   if (!nextTicket) {
-    await supabase
-      .from("counters")
-      .update({ current_ticket_id: null })
-      .eq("id", counterId);
+    await supabase.from("counters").update({ current_ticket_id: null }).eq("id", counterId);
     return null;
   }
 
-  // Update ticket and counter - go directly to in_service
   const { data: updatedTicket, error } = await supabase
     .from("tickets")
     .update({
@@ -134,42 +115,25 @@ export async function callNextTicket(counterId: string): Promise<Ticket | null> 
 
   if (error) throw error;
 
-  await supabase
-    .from("counters")
-    .update({ current_ticket_id: nextTicket.id })
-    .eq("id", counterId);
-
+  await supabase.from("counters").update({ current_ticket_id: nextTicket.id }).eq("id", counterId);
   return updatedTicket;
 }
 
 export async function startService(ticketId: string) {
-  const { error } = await supabase
-    .from("tickets")
-    .update({ status: "in_service" })
-    .eq("id", ticketId);
+  const { error } = await supabase.from("tickets").update({ status: "in_service" }).eq("id", ticketId);
   if (error) throw error;
 }
 
 export async function completeTicket(ticketId: string, counterId: string) {
-  await supabase
-    .from("tickets")
+  await supabase.from("tickets")
     .update({ status: "completed", completed_at: new Date().toISOString() })
     .eq("id", ticketId);
-  await supabase
-    .from("counters")
-    .update({ current_ticket_id: null })
-    .eq("id", counterId);
+  await supabase.from("counters").update({ current_ticket_id: null }).eq("id", counterId);
 }
 
 export async function markNoShow(ticketId: string, counterId: string) {
-  await supabase
-    .from("tickets")
-    .update({ status: "no_show" })
-    .eq("id", ticketId);
-  await supabase
-    .from("counters")
-    .update({ current_ticket_id: null })
-    .eq("id", counterId);
+  await supabase.from("tickets").update({ status: "no_show" }).eq("id", ticketId);
+  await supabase.from("counters").update({ current_ticket_id: null }).eq("id", counterId);
 }
 
 export async function getWaitingTickets() {
@@ -257,19 +221,19 @@ export async function getPendingPrints() {
   return data;
 }
 
-export async function resetAllTickets() {
+export async function resetCalledTickets() {
   const today = new Date().toISOString().split("T")[0];
 
   // Reset all counters' current ticket
   await supabase.from("counters").update({ current_ticket_id: null }).neq("id", "00000000-0000-0000-0000-000000000000");
 
-  // Cancel all waiting/called/in_service tickets for today
+  // Cancel only called/in_service tickets (NOT waiting ones, keep the queue)
   await supabase
     .from("tickets")
     .update({ status: "cancelled", completed_at: new Date().toISOString() })
     .gte("created_at", `${today}T00:00:00`)
-    .in("status", ["waiting", "called", "in_service"]);
-
-  // Reset daily sequence
-  await supabase.from("daily_sequence").update({ last_number: 0 }).eq("date", today);
+    .in("status", ["called", "in_service"]);
 }
+
+// Keep old name for backward compat but redirect to new behavior
+export const resetAllTickets = resetCalledTickets;

@@ -3,13 +3,20 @@ import { Button } from "@/components/ui/button";
 import { Card, CardContent } from "@/components/ui/card";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
-import { getServiceTypes, generateTicket } from "@/lib/ticket-service";
+import { getServiceTypes, generateTicket, getSystemConfig } from "@/lib/ticket-service";
 import { printTicket } from "@/lib/print-service";
 import { supabase } from "@/integrations/supabase/client";
 import type { ServiceType, Ticket } from "@/lib/ticket-service";
 import { Printer, User, FileText, Heart, ArrowLeft } from "lucide-react";
 
 type Step = "select_type" | "optional_info" | "ticket_generated";
+
+interface TotemConfig {
+  askName: boolean;
+  askCpf: boolean;
+}
+
+const defaultTotemConfig: TotemConfig = { askName: true, askCpf: true };
 
 const Totem = () => {
   const [serviceTypes, setServiceTypes] = useState<ServiceType[]>([]);
@@ -20,6 +27,7 @@ const Totem = () => {
   const [patientCpf, setPatientCpf] = useState("");
   const [generatedTicket, setGeneratedTicket] = useState<Ticket | null>(null);
   const [loading, setLoading] = useState(false);
+  const [totemConfig, setTotemConfig] = useState<TotemConfig>(defaultTotemConfig);
 
   const loadServiceTypes = useCallback(() => {
     getServiceTypes().then(setServiceTypes).catch(console.error);
@@ -27,6 +35,9 @@ const Totem = () => {
 
   useEffect(() => {
     loadServiceTypes();
+    getSystemConfig("totem_config").then((data) => {
+      if (data) setTotemConfig(data as unknown as TotemConfig);
+    });
 
     const channel = supabase
       .channel("totem-service-types")
@@ -38,7 +49,26 @@ const Totem = () => {
 
   const handleSelectType = (type: ServiceType) => {
     setSelectedType(type);
-    setStep("optional_info");
+    // If neither name nor CPF is configured, skip directly to generate
+    if (!totemConfig.askName && !totemConfig.askCpf) {
+      handleGenerateDirect(type);
+    } else {
+      setStep("optional_info");
+    }
+  };
+
+  const handleGenerateDirect = async (type: ServiceType) => {
+    setLoading(true);
+    try {
+      const ticket = await generateTicket(type.id, ticketType);
+      setGeneratedTicket(ticket);
+      setStep("ticket_generated");
+      printTicket(ticket).catch(console.error);
+    } catch (err) {
+      console.error("Erro ao gerar senha:", err);
+    } finally {
+      setLoading(false);
+    }
   };
 
   const handleGenerate = async () => {
@@ -53,8 +83,6 @@ const Totem = () => {
       );
       setGeneratedTicket(ticket);
       setStep("ticket_generated");
-
-      // Print in background (non-blocking)
       printTicket(ticket).catch(console.error);
     } catch (err) {
       console.error("Erro ao gerar senha:", err);
@@ -72,7 +100,6 @@ const Totem = () => {
     setGeneratedTicket(null);
   };
 
-  // Auto-reset after 8 seconds on ticket screen
   useEffect(() => {
     if (step === "ticket_generated") {
       const timer = setTimeout(handleReset, 8000);
@@ -88,42 +115,28 @@ const Totem = () => {
 
   return (
     <div className="min-h-screen bg-primary flex flex-col items-center justify-center p-6">
-      {/* Header */}
       <div className="text-center mb-8">
-        <h1 className="text-4xl font-bold text-primary-foreground mb-2">
-          Sistema de Senhas
-        </h1>
-        <p className="text-primary-foreground/80 text-lg">
-          Toque para retirar sua senha
-        </p>
+        <h1 className="text-4xl font-bold text-primary-foreground mb-2">Sistema de Senhas</h1>
+        <p className="text-primary-foreground/80 text-lg">Toque para retirar sua senha</p>
       </div>
 
       {step === "select_type" && (
         <div className="grid grid-cols-1 md:grid-cols-3 gap-6 max-w-4xl w-full">
           {serviceTypes.map((type) => (
-            <button
-              key={type.id}
-              onClick={() => handleSelectType(type)}
-              className="group"
-            >
+            <button key={type.id} onClick={() => handleSelectType(type)} className="group">
               <Card className="h-full transition-all duration-200 hover:scale-105 hover:shadow-xl cursor-pointer border-2 border-transparent hover:border-accent">
                 <CardContent className="flex flex-col items-center justify-center p-10 gap-4">
                   <div className="text-primary group-hover:text-accent transition-colors">
                     {iconMap[type.prefix] || <FileText className="h-12 w-12" />}
                   </div>
-                  <span className="text-2xl font-bold text-card-foreground">
-                    {type.name}
-                  </span>
+                  <span className="text-2xl font-bold text-card-foreground">{type.name}</span>
                   {type.description && (
-                    <span className="text-sm text-muted-foreground text-center">
-                      {type.description}
-                    </span>
+                    <span className="text-sm text-muted-foreground text-center">{type.description}</span>
                   )}
                 </CardContent>
               </Card>
             </button>
           ))}
-
         </div>
       )}
 
@@ -131,37 +144,27 @@ const Totem = () => {
         <Card className="max-w-md w-full">
           <CardContent className="p-8 space-y-6">
             <div className="text-center">
-              <h2 className="text-xl font-bold text-card-foreground mb-1">
-                {selectedType?.name}
-              </h2>
+              <h2 className="text-xl font-bold text-card-foreground mb-1">{selectedType?.name}</h2>
               <p className="text-sm text-muted-foreground">
-                Informações opcionais (toque em gerar para pular)
+                {totemConfig.askName || totemConfig.askCpf ? "Informações opcionais (toque em gerar para pular)" : ""}
               </p>
             </div>
 
             <div className="space-y-4">
-              <div>
-                <Label htmlFor="name" className="flex items-center gap-2">
-                  <User className="h-4 w-4" /> Nome (opcional)
-                </Label>
-                <Input
-                  id="name"
-                  value={patientName}
-                  onChange={(e) => setPatientName(e.target.value)}
-                  placeholder="Seu nome"
-                  className="mt-1"
-                />
-              </div>
-              <div>
-                <Label htmlFor="cpf">CPF (opcional)</Label>
-                <Input
-                  id="cpf"
-                  value={patientCpf}
-                  onChange={(e) => setPatientCpf(e.target.value)}
-                  placeholder="000.000.000-00"
-                  className="mt-1"
-                />
-              </div>
+              {totemConfig.askName && (
+                <div>
+                  <Label htmlFor="name" className="flex items-center gap-2">
+                    <User className="h-4 w-4" /> Nome (opcional)
+                  </Label>
+                  <Input id="name" value={patientName} onChange={(e) => setPatientName(e.target.value)} placeholder="Seu nome" className="mt-1" />
+                </div>
+              )}
+              {totemConfig.askCpf && (
+                <div>
+                  <Label htmlFor="cpf">CPF (opcional)</Label>
+                  <Input id="cpf" value={patientCpf} onChange={(e) => setPatientCpf(e.target.value)} placeholder="000.000.000-00" className="mt-1" />
+                </div>
+              )}
             </div>
 
             <div className="flex gap-3">
@@ -179,28 +182,18 @@ const Totem = () => {
       {step === "ticket_generated" && generatedTicket && (
         <Card className="max-w-md w-full animate-ticket-pulse">
           <CardContent className="p-10 text-center space-y-4">
-            <p className="text-sm text-muted-foreground font-medium uppercase tracking-wider">
-              Sua senha é
-            </p>
-            <div className="text-7xl font-black text-primary tracking-widest">
-              {generatedTicket.display_number}
-            </div>
+            <p className="text-sm text-muted-foreground font-medium uppercase tracking-wider">Sua senha é</p>
+            <div className="text-7xl font-black text-primary tracking-widest">{generatedTicket.display_number}</div>
             <div className="text-lg text-muted-foreground">
               {generatedTicket.ticket_type === "priority" && "🔴 Prioritário"}
               {generatedTicket.ticket_type === "preferential" && "💙 Preferencial"}
               {generatedTicket.ticket_type === "normal" && "Normal"}
             </div>
             <div className="border-t border-border pt-4 mt-4">
-              <p className="text-sm text-muted-foreground">
-                Aguarde ser chamado no painel
-              </p>
-              <p className="text-xs text-muted-foreground mt-2">
-                {new Date().toLocaleString("pt-BR")}
-              </p>
+              <p className="text-sm text-muted-foreground">Aguarde ser chamado no painel</p>
+              <p className="text-xs text-muted-foreground mt-2">{new Date().toLocaleString("pt-BR")}</p>
             </div>
-            <Button onClick={handleReset} variant="outline" className="mt-4">
-              Nova Senha
-            </Button>
+            <Button onClick={handleReset} variant="outline" className="mt-4">Nova Senha</Button>
           </CardContent>
         </Card>
       )}
