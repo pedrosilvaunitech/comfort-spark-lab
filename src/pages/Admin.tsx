@@ -26,6 +26,7 @@ import { Reports } from "@/components/admin/Reports";
 import { VoiceConfig } from "@/components/admin/VoiceConfig";
 import { QueueManagement } from "@/components/admin/QueueManagement";
 import { TotemConfig } from "@/components/admin/TotemConfig";
+import { ScreenConfigPanel } from "@/components/admin/ScreenConfig";
 import { toast } from "sonner";
 import { Link, Navigate } from "react-router-dom";
 import {
