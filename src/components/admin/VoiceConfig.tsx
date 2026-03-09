@@ -5,16 +5,19 @@ import { Label } from "@/components/ui/label";
 import { Button } from "@/components/ui/button";
 import { Slider } from "@/components/ui/slider";
 import { Switch } from "@/components/ui/switch";
-import { Save, Volume2 } from "lucide-react";
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
+import { Save, Volume2, RefreshCw } from "lucide-react";
 import { getSystemConfig, updateSystemConfig } from "@/lib/ticket-service";
+import { supabase } from "@/integrations/supabase/client";
 import { toast } from "sonner";
 
 export interface VoiceSettings {
-  template: string; // e.g. "Senha {senha}, dirija-se ao {guiche}"
+  template: string;
   rate: number;
   pitch: number;
   beepEnabled: boolean;
   repeatCount: number;
+  voiceName: string; // selected voice name
 }
 
 const defaultVoiceSettings: VoiceSettings = {
@@ -23,32 +26,45 @@ const defaultVoiceSettings: VoiceSettings = {
   pitch: 1,
   beepEnabled: true,
   repeatCount: 1,
+  voiceName: "",
 };
 
 export function VoiceConfig() {
   const [settings, setSettings] = useState<VoiceSettings>(defaultVoiceSettings);
   const [saving, setSaving] = useState(false);
+  const [availableVoices, setAvailableVoices] = useState<SpeechSynthesisVoice[]>([]);
 
   useEffect(() => {
     loadSettings();
+    loadVoices();
+    speechSynthesis.addEventListener("voiceschanged", loadVoices);
+    return () => speechSynthesis.removeEventListener("voiceschanged", loadVoices);
   }, []);
+
+  const loadVoices = () => {
+    const voices = speechSynthesis.getVoices();
+    // Show all voices, prioritize Portuguese ones
+    const sorted = [...voices].sort((a, b) => {
+      const aIsPt = a.lang.startsWith("pt") ? 0 : 1;
+      const bIsPt = b.lang.startsWith("pt") ? 0 : 1;
+      if (aIsPt !== bIsPt) return aIsPt - bIsPt;
+      return a.name.localeCompare(b.name);
+    });
+    setAvailableVoices(sorted);
+  };
 
   const loadSettings = async () => {
     const data = await getSystemConfig("voice_settings");
-    if (data) setSettings(data as unknown as VoiceSettings);
+    if (data) setSettings({ ...defaultVoiceSettings, ...(data as unknown as VoiceSettings) });
   };
 
   const handleSave = async () => {
     setSaving(true);
     try {
-      // Upsert: try update, if no rows affected, insert
-      const { error } = await import("@/integrations/supabase/client").then(m =>
-        m.supabase.from("system_config").upsert(
-          { key: "voice_settings", value: settings as any },
-          { onConflict: "key" }
-        )
+      await supabase.from("system_config").upsert(
+        { key: "voice_settings", value: settings as any },
+        { onConflict: "key" }
       );
-      if (error) throw error;
       toast.success("Configuração de voz salva!");
     } catch {
       toast.error("Erro ao salvar");
@@ -68,14 +84,27 @@ export function VoiceConfig() {
     utterance.rate = settings.rate;
     utterance.pitch = settings.pitch;
 
-    const voices = speechSynthesis.getVoices();
-    const ptVoice = voices.find(
-      (v) => v.lang.startsWith("pt") && v.name.toLowerCase().includes("google")
-    ) || voices.find((v) => v.lang.startsWith("pt-BR"));
-    if (ptVoice) utterance.voice = ptVoice;
+    if (settings.voiceName) {
+      const voice = availableVoices.find((v) => v.name === settings.voiceName);
+      if (voice) utterance.voice = voice;
+    } else {
+      const voices = speechSynthesis.getVoices();
+      const ptVoice = voices.find((v) => v.lang.startsWith("pt") && v.name.toLowerCase().includes("google"))
+        || voices.find((v) => v.lang.startsWith("pt-BR"));
+      if (ptVoice) utterance.voice = ptVoice;
+    }
 
     speechSynthesis.speak(utterance);
   };
+
+  const getVoiceLabel = (voice: SpeechSynthesisVoice) => {
+    const langLabel = voice.lang;
+    const defaultLabel = voice.default ? " ★" : "";
+    return `${voice.name} (${langLabel})${defaultLabel}`;
+  };
+
+  const ptVoices = availableVoices.filter((v) => v.lang.startsWith("pt"));
+  const otherVoices = availableVoices.filter((v) => !v.lang.startsWith("pt"));
 
   return (
     <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
@@ -95,6 +124,56 @@ export function VoiceConfig() {
             <p className="text-xs text-muted-foreground mt-1">
               Use <code className="bg-muted px-1 rounded">{"{senha}"}</code> para o número e{" "}
               <code className="bg-muted px-1 rounded">{"{guiche}"}</code> para o nome do guichê.
+            </p>
+          </div>
+
+          <div>
+            <div className="flex items-center justify-between mb-2">
+              <Label>Voz</Label>
+              <Button variant="ghost" size="sm" onClick={loadVoices} title="Recarregar vozes">
+                <RefreshCw className="h-3 w-3" />
+              </Button>
+            </div>
+            <Select
+              value={settings.voiceName || "__auto__"}
+              onValueChange={(v) => setSettings({ ...settings, voiceName: v === "__auto__" ? "" : v })}
+            >
+              <SelectTrigger><SelectValue placeholder="Selecione uma voz" /></SelectTrigger>
+              <SelectContent className="max-h-64">
+                <SelectItem value="__auto__">🔄 Automático (melhor pt-BR disponível)</SelectItem>
+                {ptVoices.length > 0 && (
+                  <>
+                    <div className="px-2 py-1 text-xs font-semibold text-muted-foreground bg-muted">
+                      🇧🇷 Português
+                    </div>
+                    {ptVoices.map((v) => (
+                      <SelectItem key={v.name} value={v.name}>
+                        {getVoiceLabel(v)}
+                      </SelectItem>
+                    ))}
+                  </>
+                )}
+                {otherVoices.length > 0 && (
+                  <>
+                    <div className="px-2 py-1 text-xs font-semibold text-muted-foreground bg-muted">
+                      🌐 Outros idiomas
+                    </div>
+                    {otherVoices.map((v) => (
+                      <SelectItem key={v.name} value={v.name}>
+                        {getVoiceLabel(v)}
+                      </SelectItem>
+                    ))}
+                  </>
+                )}
+                {availableVoices.length === 0 && (
+                  <div className="px-2 py-2 text-sm text-muted-foreground">
+                    Nenhuma voz encontrada. Clique em recarregar.
+                  </div>
+                )}
+              </SelectContent>
+            </Select>
+            <p className="text-xs text-muted-foreground mt-1">
+              {availableVoices.length} vozes disponíveis neste navegador
             </p>
           </div>
 
@@ -161,6 +240,12 @@ export function VoiceConfig() {
               {settings.template
                 .replace("{senha}", "N 1")
                 .replace("{guiche}", "Guichê 1")}
+            </p>
+          </div>
+          <div className="bg-muted rounded-lg p-4">
+            <p className="text-sm font-medium mb-1">Voz selecionada:</p>
+            <p className="text-sm">
+              {settings.voiceName || "Automático (melhor pt-BR)"}
             </p>
           </div>
           <Button onClick={handleTestVoice} variant="outline" className="w-full">
