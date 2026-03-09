@@ -143,6 +143,7 @@ const Admin = () => {
           </TabsList>
 
           <TabsContent value="queue"><QueueManagement /></TabsContent>
+          {isAdmin && <TabsContent value="priority"><PriorityConfig /></TabsContent>}
           {isAdmin && <TabsContent value="counters"><CounterManagement /></TabsContent>}
           {isAdmin && <TabsContent value="services"><ServiceTypeManagement /></TabsContent>}
           {isAdmin && <TabsContent value="users"><UserManagement /></TabsContent>}
