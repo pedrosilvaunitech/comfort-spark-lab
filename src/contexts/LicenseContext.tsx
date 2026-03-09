@@ -60,7 +60,6 @@ export function LicenseProvider({ children }: { children: React.ReactNode }) {
       setDiasTolerancia(serverConfig.tolerancia_dias);
       setIsConfigured(serverConfig.configured);
 
-    try {
       if (!serverConfig.configured) {
         setIsConfigured(false);
         setIsBlocked(false);
