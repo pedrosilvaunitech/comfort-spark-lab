@@ -28,10 +28,7 @@ const LicenseSettings = () => {
   const handleSave = async () => {
     setSaving(true);
     try {
-      // Save tolerance locally
-      saveConfigLocal(config);
-      // Save keys to server (secure)
-      const result = await saveKeysToServer(config.apiKey, config.activationKey);
+      const result = await saveKeysToServer(config.apiKey, config.activationKey, config.toleranciaDiasAtraso);
       if (result.license) setTestResult(result.license);
       toast.success("Configuração salva com segurança!");
       checkLicense();
