@@ -19,7 +19,11 @@ const LicenseSettings = () => {
   const [saving, setSaving] = useState(false);
   const [testResult, setTestResult] = useState<any>(null);
 
-  useEffect(() => { setConfig(getStoredConfig()); }, []);
+  useEffect(() => {
+    getConfigFromServer().then(cfg => {
+      setConfig(prev => ({ ...prev, toleranciaDiasAtraso: cfg.tolerancia_dias }));
+    });
+  }, []);
 
   const handleSave = async () => {
     setSaving(true);
