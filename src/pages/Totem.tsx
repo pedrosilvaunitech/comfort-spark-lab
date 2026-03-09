@@ -21,6 +21,7 @@ interface TotemConfig {
 const defaultTotemConfig: TotemConfig = { askName: true, askCpf: true };
 
 const Totem = () => {
+  useKioskMode();
   const [serviceTypes, setServiceTypes] = useState<ServiceType[]>([]);
   const [step, setStep] = useState<Step>("select_type");
   const [selectedType, setSelectedType] = useState<ServiceType | null>(null);
