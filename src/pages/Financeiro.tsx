@@ -4,7 +4,7 @@ import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/ui/dialog";
 import { useLicense } from "@/contexts/LicenseContext";
-import { getPixImage, getBoletoPdf, getStoredConfig } from "@/services/licenseApi";
+import { getPixImage, getBoletoPdf } from "@/services/licenseApi";
 import { useAuth } from "@/hooks/use-auth";
 import { Navigate, Link } from "react-router-dom";
 import { toast } from "sonner";
