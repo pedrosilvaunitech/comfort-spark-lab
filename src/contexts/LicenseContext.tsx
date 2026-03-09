@@ -100,7 +100,7 @@ export function LicenseProvider({ children }: { children: React.ReactNode }) {
         setBlockReason('Sua licença está suspensa');
       } else if (isInadimplente) {
         setIsBlocked(true);
-        setBlockReason(`Sistema bloqueado por inadimplência. Pagamentos vencidos há mais de ${config.toleranciaDiasAtraso} dias. Regularize para continuar.`);
+        setBlockReason(`Sistema bloqueado por inadimplência. Pagamentos vencidos há mais de ${serverConfig.tolerancia_dias} dias. Regularize para continuar.`);
       } else {
         setIsBlocked(false);
         setBlockReason('');
