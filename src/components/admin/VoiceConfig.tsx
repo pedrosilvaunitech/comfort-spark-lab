@@ -39,7 +39,7 @@ export const defaultVoiceSettings: VoiceSettings = {
   speakPrefix: true,
 };
 
-export function formatTicketForSpeech(displayNumber: string, settings: VoiceSettings): string {
+export function formatNumberForSpeech(displayNumber: string, settings: VoiceSettings): string {
   const prefix = displayNumber.replace(/[0-9]/g, "").trim();
   const numStr = displayNumber.replace(/[^0-9]/g, "");
   const num = parseInt(numStr, 10);
@@ -47,37 +47,39 @@ export function formatTicketForSpeech(displayNumber: string, settings: VoiceSett
   let spokenNumber: string;
   switch (settings.numberFormat) {
     case "full":
-      spokenNumber = numStr; // "0001"
+      spokenNumber = numStr;
       break;
     case "digit_by_digit":
-      spokenNumber = numStr.split("").join(" "); // "0 0 0 1"
+      spokenNumber = numStr.split("").join(" ");
       break;
     case "no_zeros":
     default:
-      spokenNumber = String(num); // "1"
+      spokenNumber = String(num);
       break;
   }
 
   const letterPrefix = settings.speakPrefix ? prefix : "";
+  return letterPrefix ? `${letterPrefix} ${spokenNumber}` : spokenNumber;
+}
 
-  let spokenPrefix: string;
+export function formatPrefixForSpeech(settings: VoiceSettings): string {
   switch (settings.prefixFormat) {
     case "numero":
-      spokenPrefix = letterPrefix ? `${letterPrefix} número` : "número";
-      break;
+      return "Número";
     case "senha_numero":
-      spokenPrefix = letterPrefix ? `Senha número ${letterPrefix}` : "Senha número";
-      break;
+      return "Senha número";
     case "custom":
-      spokenPrefix = settings.customPrefix || letterPrefix;
-      break;
+      return settings.customPrefix || "";
     case "senha":
     default:
-      spokenPrefix = letterPrefix ? `Senha ${letterPrefix}` : "Senha";
-      break;
+      return "Senha";
   }
+}
 
-  return `${spokenPrefix} ${spokenNumber}`;
+export function formatTicketForSpeech(displayNumber: string, settings: VoiceSettings): string {
+  const prefix = formatPrefixForSpeech(settings);
+  const number = formatNumberForSpeech(displayNumber, settings);
+  return prefix ? `${prefix} ${number}` : number;
 }
 
 export function VoiceConfig() {
@@ -124,22 +126,12 @@ export function VoiceConfig() {
     }
   };
 
-  const getPreviewText = () => {
-    const spokenPart = formatTicketForSpeech("N0001", settings);
+  const getPreviewTextFull = (displayNumber = "N0001") => {
+    const prefix = formatPrefixForSpeech(settings);
+    const number = formatNumberForSpeech(displayNumber, settings);
     return settings.template
-      .replace("{prefixo}", "")
-      .replace("{senha}", spokenPart)
-      .replace("{guiche}", "Guichê 1")
-      .replace(/\s+/g, " ")
-      .trim();
-  };
-
-  const getPreviewTextFull = () => {
-    const spokenPart = formatTicketForSpeech("N0001", settings);
-    return settings.template
-      .replace("{prefixo} {senha}", spokenPart)
-      .replace("{prefixo}", "")
-      .replace("{senha}", spokenPart)
+      .replace("{prefixo}", prefix)
+      .replace("{senha}", number)
       .replace("{guiche}", "Guichê 1")
       .replace(/\s+/g, " ")
       .trim();
@@ -386,9 +378,9 @@ export function VoiceConfig() {
           <div className="bg-muted rounded-lg p-4">
             <p className="text-sm font-medium mb-1">Exemplos de como soa:</p>
             <ul className="text-sm space-y-1 text-muted-foreground">
-              <li>N0001 → "{formatTicketForSpeech("N0001", settings)}"</li>
-              <li>E0015 → "{formatTicketForSpeech("E0015", settings)}"</li>
-              <li>P1002 → "{formatTicketForSpeech("P1002", settings)}"</li>
+              <li>N0001 → "{getPreviewTextFull("N0001")}"</li>
+              <li>E0015 → "{getPreviewTextFull("E0015")}"</li>
+              <li>P1002 → "{getPreviewTextFull("P1002")}"</li>
             </ul>
           </div>
           <Button onClick={handleTestVoice} variant="outline" className="w-full">
