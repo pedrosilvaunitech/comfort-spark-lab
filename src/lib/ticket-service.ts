@@ -96,7 +96,7 @@ export async function callNextTicket(counterId: string): Promise<Ticket | null> 
   } | null;
 
   let nextTicket: Ticket | null = null;
-  const priorityTypes = ["priority"];
+  const priorityTypes: ("normal" | "priority" | "preferential")[] = ["priority"];
   if (priority?.includePreferential !== false) priorityTypes.push("preferential");
 
   const shouldCallPriority = await determinePriority(priority);
