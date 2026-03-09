@@ -127,10 +127,11 @@ const Admin = () => {
 
       <main className="container mx-auto p-6">
         <Tabs defaultValue="queue" className="space-y-6">
-          <TabsList className={`grid w-full ${isAdmin ? 'grid-cols-11' : 'grid-cols-2'}`}>
+          <TabsList className={`grid w-full ${isAdmin ? 'grid-cols-12' : 'grid-cols-2'}`}>
             <TabsTrigger value="queue" className="gap-1 text-xs"><ListOrdered className="h-3 w-3" /> Fila</TabsTrigger>
             {isAdmin && <TabsTrigger value="counters" className="gap-1 text-xs"><Monitor className="h-3 w-3" /> Guichês</TabsTrigger>}
             {isAdmin && <TabsTrigger value="services" className="gap-1 text-xs"><FileText className="h-3 w-3" /> Serviços</TabsTrigger>}
+            {isAdmin && <TabsTrigger value="priority" className="gap-1 text-xs"><ShieldAlert className="h-3 w-3" /> Prioridade</TabsTrigger>}
             {isAdmin && <TabsTrigger value="users" className="gap-1 text-xs"><Users className="h-3 w-3" /> Usuários</TabsTrigger>}
             {isAdmin && <TabsTrigger value="totem" className="gap-1 text-xs"><Tablet className="h-3 w-3" /> Totem</TabsTrigger>}
             {isAdmin && <TabsTrigger value="screens" className="gap-1 text-xs"><Palette className="h-3 w-3" /> Telas</TabsTrigger>}
