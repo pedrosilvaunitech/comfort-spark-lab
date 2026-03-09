@@ -8,6 +8,7 @@ interface VoiceSettings {
   pitch: number;
   beepEnabled: boolean;
   repeatCount: number;
+  voiceName: string;
 }
 
 const defaultVoiceSettings: VoiceSettings = {
@@ -16,6 +17,7 @@ const defaultVoiceSettings: VoiceSettings = {
   pitch: 1,
   beepEnabled: true,
   repeatCount: 1,
+  voiceName: "",
 };
 
 function parseTicketNumber(displayNumber: string): string {
@@ -57,6 +59,25 @@ function playBeep(): Promise<void> {
   });
 }
 
+function findVoice(settings: VoiceSettings): SpeechSynthesisVoice | null {
+  const voices = speechSynthesis.getVoices();
+  
+  // If a specific voice is configured, use it
+  if (settings.voiceName) {
+    const selected = voices.find((v) => v.name === settings.voiceName);
+    if (selected) return selected;
+  }
+  
+  // Fallback: best pt-BR voice
+  const googleVoice = voices.find(
+    (v) => v.lang.startsWith("pt") && v.name.toLowerCase().includes("google")
+  );
+  if (googleVoice) return googleVoice;
+  
+  const ptVoice = voices.find((v) => v.lang.startsWith("pt-BR"));
+  return ptVoice || null;
+}
+
 async function speakTicket(displayNumber: string, counterName: string, settings: VoiceSettings) {
   const parsed = parseTicketNumber(displayNumber);
   const text = settings.template
@@ -72,16 +93,9 @@ async function speakTicket(displayNumber: string, counterName: string, settings:
     utterance.rate = settings.rate;
     utterance.pitch = settings.pitch;
 
-    const voices = speechSynthesis.getVoices();
-    const googleVoice = voices.find(
-      (v) => v.lang.startsWith("pt") && v.name.toLowerCase().includes("google")
-    );
-    if (googleVoice) {
-      utterance.voice = googleVoice;
-    } else {
-      const ptVoice = voices.find((v) => v.lang.startsWith("pt-BR"));
-      if (ptVoice) utterance.voice = ptVoice;
-    }
+    const voice = findVoice(settings);
+    if (voice) utterance.voice = voice;
+
     return utterance;
   };
 
@@ -106,7 +120,7 @@ const Panel = () => {
 
   useEffect(() => {
     getSystemConfig("voice_settings").then((data) => {
-      if (data) voiceSettingsRef.current = data as unknown as VoiceSettings;
+      if (data) voiceSettingsRef.current = { ...defaultVoiceSettings, ...(data as unknown as VoiceSettings) };
     });
   }, []);
 
@@ -131,17 +145,11 @@ const Panel = () => {
   const currentCalled = calledTickets[0];
   const recentCalled = calledTickets.slice(1, 5);
 
-  const getServiceTypeName = (ticket: any) => {
-    return ticket?.service_types?.name || "Convencional";
-  };
-
-  const getCounterName = (ticket: any) => {
-    return ticket?.counters?.name || "Guichê";
-  };
+  const getServiceTypeName = (ticket: any) => ticket?.service_types?.name || "Convencional";
+  const getCounterName = (ticket: any) => ticket?.counters?.name || "Guichê";
 
   return (
     <div className="min-h-screen bg-primary flex flex-col">
-      {/* Main ticket area */}
       <div className="flex-1 flex flex-col items-center justify-center px-8 py-6">
         {currentCalled ? (
           <div className={`text-center ${lastCalled?.id === currentCalled.id ? "animate-flash-call" : ""}`}>
@@ -166,7 +174,6 @@ const Panel = () => {
         )}
       </div>
 
-      {/* Recent tickets bar */}
       <div className="bg-primary/80 border-t-4 border-primary-foreground/20">
         <div className="grid grid-cols-4 divide-x divide-primary-foreground/20">
           {recentCalled.length > 0
