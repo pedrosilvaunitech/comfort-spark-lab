@@ -88,18 +88,54 @@ export async function callNextTicket(counterId: string): Promise<Ticket | null> 
       .eq("id", counter.current_ticket_id);
   }
 
-  const { data: nextTicket } = await supabase
-    .from("tickets")
-    .select("*")
-    .eq("status", "waiting")
-    .order("ticket_type", { ascending: true })
-    .order("created_at", { ascending: true })
-    .limit(1)
-    .single();
+  // Load priority settings
+  const priorityRaw = await getSystemConfig("priority_settings");
+  const priority = priorityRaw as unknown as {
+    enabled?: boolean; mode?: string; percentage?: number; everyN?: number;
+    burstCount?: number; includePreferential?: boolean;
+  } | null;
+
+  let nextTicket: Ticket | null = null;
+  const priorityTypes = ["priority"];
+  if (priority?.includePreferential !== false) priorityTypes.push("preferential");
+
+  const shouldCallPriority = await determinePriority(priority);
+
+  if (shouldCallPriority) {
+    // Try to get a priority/preferential ticket first
+    const { data } = await supabase
+      .from("tickets")
+      .select("*")
+      .eq("status", "waiting")
+      .in("ticket_type", priorityTypes)
+      .order("created_at", { ascending: true })
+      .limit(1)
+      .single();
+    nextTicket = data;
+  }
+
+  if (!nextTicket) {
+    // Fall back to any waiting ticket (FIFO)
+    const { data } = await supabase
+      .from("tickets")
+      .select("*")
+      .eq("status", "waiting")
+      .order("created_at", { ascending: true })
+      .limit(1)
+      .single();
+    nextTicket = data;
+  }
 
   if (!nextTicket) {
     await supabase.from("counters").update({ current_ticket_id: null }).eq("id", counterId);
     return null;
+  }
+
+  // Track normal call count for every_n mode
+  if (nextTicket.ticket_type === "normal") {
+    await incrementNormalCallCount();
+  } else {
+    await resetNormalCallCount();
   }
 
   const { data: updatedTicket, error } = await supabase
@@ -117,6 +153,55 @@ export async function callNextTicket(counterId: string): Promise<Ticket | null> 
 
   await supabase.from("counters").update({ current_ticket_id: nextTicket.id }).eq("id", counterId);
   return updatedTicket;
+}
+
+async function determinePriority(settings: any): Promise<boolean> {
+  if (!settings?.enabled) {
+    // Default behavior: priority first (legacy)
+    return true;
+  }
+
+  const mode = settings.mode || "always_first";
+
+  if (mode === "always_first") return true;
+
+  if (mode === "percentage") {
+    const pct = settings.percentage || 30;
+    return Math.random() * 100 < pct;
+  }
+
+  if (mode === "every_n") {
+    const everyN = settings.everyN || 3;
+    const today = new Date().toISOString().split("T")[0];
+    const { data } = await supabase
+      .from("system_config")
+      .select("value")
+      .eq("key", "normal_call_count")
+      .single();
+    const count = (data?.value as any)?.count || 0;
+    return count >= everyN;
+  }
+
+  return true;
+}
+
+async function incrementNormalCallCount() {
+  const { data } = await supabase.from("system_config").select("*").eq("key", "normal_call_count").single();
+  const current = (data?.value as any)?.count || 0;
+  if (data) {
+    await supabase.from("system_config").update({ value: { count: current + 1 } as any }).eq("key", "normal_call_count");
+  } else {
+    await supabase.from("system_config").insert({ key: "normal_call_count", value: { count: 1 } as any });
+  }
+}
+
+async function resetNormalCallCount() {
+  const { data } = await supabase.from("system_config").select("*").eq("key", "normal_call_count").single();
+  if (data) {
+    await supabase.from("system_config").update({ value: { count: 0 } as any }).eq("key", "normal_call_count");
+  } else {
+    await supabase.from("system_config").insert({ key: "normal_call_count", value: { count: 0 } as any });
+  }
 }
 
 export async function startService(ticketId: string) {
