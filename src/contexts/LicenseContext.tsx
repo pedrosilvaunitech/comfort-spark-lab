@@ -53,19 +53,13 @@ export function LicenseProvider({ children }: { children: React.ReactNode }) {
 
   const checkLicense = useCallback(async () => {
     const config = getStoredConfig();
-    if (!config.apiKey || !config.activationKey) {
-      setIsConfigured(false);
-      setIsBlocked(false);
-      return;
-    }
-    setIsConfigured(true);
     setDiasTolerancia(config.toleranciaDiasAtraso);
     setChecking(true);
 
     try {
       const [licRes, payRes] = await Promise.all([
-        getLicense(config.activationKey),
-        getPayments(config.activationKey),
+        getLicense(),
+        getPayments(),
       ]);
 
       const lic = licRes.license;
@@ -102,6 +96,11 @@ export function LicenseProvider({ children }: { children: React.ReactNode }) {
       }
     } catch (err: any) {
       console.error('[License] check failed:', err);
+      // If keys not configured, mark as not configured
+      if (err.message?.includes('não configurada') || err.message?.includes('incompletas')) {
+        setIsConfigured(false);
+        setIsBlocked(false);
+      }
     } finally {
       setChecking(false);
     }
@@ -121,19 +120,17 @@ export function LicenseProvider({ children }: { children: React.ReactNode }) {
   }, [isBlocked, location.pathname]);
 
   const handlePix = async (paymentId: string) => {
-    const config = getStoredConfig();
     setPixLoading(true);
     try {
-      const data = await getPixImage(paymentId, config.activationKey);
+      const data = await getPixImage(paymentId);
       setPixData(data);
     } catch { toast.error("Falha ao gerar PIX"); }
     finally { setPixLoading(false); }
   };
 
   const handleBoleto = async (paymentId: string) => {
-    const config = getStoredConfig();
     try {
-      const url = await getBoletoPdf(paymentId, config.activationKey);
+      const url = await getBoletoPdf(paymentId);
       window.open(url, '_blank');
     } catch { toast.error("Falha ao gerar boleto"); }
   };

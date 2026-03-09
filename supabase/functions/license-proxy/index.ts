@@ -1,4 +1,5 @@
 import { serve } from "https://deno.land/std@0.168.0/http/server.ts";
+import { createClient } from "https://esm.sh/@supabase/supabase-js@2";
 
 const corsHeaders = {
   'Access-Control-Allow-Origin': '*',
@@ -7,22 +8,41 @@ const corsHeaders = {
 
 const EXTERNAL_API = 'https://biqzwxxiifmzrccdvnxf.supabase.co/functions/v1/client-api';
 
+async function getLicenseKeys(supabaseClient: any): Promise<{ api_key: string; activation_key: string }> {
+  const { data, error } = await supabaseClient
+    .from('system_config')
+    .select('value')
+    .eq('key', 'license_keys')
+    .single();
+
+  if (error || !data) {
+    throw new Error('Chaves de licença não configuradas no sistema');
+  }
+
+  const keys = data.value as any;
+  if (!keys?.api_key || !keys?.activation_key) {
+    throw new Error('Chaves de licença incompletas');
+  }
+
+  return { api_key: keys.api_key, activation_key: keys.activation_key };
+}
+
 serve(async (req) => {
   if (req.method === 'OPTIONS') {
     return new Response(null, { headers: corsHeaders });
   }
 
   try {
-    const url = new URL(req.url);
     const body = await req.json().catch(() => ({}));
-    const { action, api_key, activation_key, payment_id, ticket_id, subject, message, priority } = body;
+    const { action, payment_id, ticket_id, subject, message, priority } = body;
 
-    if (!api_key || !activation_key) {
-      return new Response(JSON.stringify({ error: 'Credenciais não fornecidas' }), {
-        status: 400,
-        headers: { ...corsHeaders, 'Content-Type': 'application/json' },
-      });
-    }
+    // Create supabase client to read config
+    const supabaseUrl = Deno.env.get('SUPABASE_URL')!;
+    const supabaseKey = Deno.env.get('SUPABASE_SERVICE_ROLE_KEY')!;
+    const supabaseClient = createClient(supabaseUrl, supabaseKey);
+
+    // Get keys from database (server-side only)
+    const { api_key, activation_key } = await getLicenseKeys(supabaseClient);
 
     const headers: Record<string, string> = {
       'x-api-key': api_key,
@@ -90,6 +110,51 @@ serve(async (req) => {
         fetchBody = JSON.stringify({ activation_key, message });
         break;
 
+      // Special: save keys (called from admin settings)
+      case 'save_keys': {
+        const { new_api_key, new_activation_key } = body;
+        if (!new_api_key || !new_activation_key) {
+          return new Response(JSON.stringify({ error: 'Chaves obrigatórias' }), {
+            status: 400, headers: { ...corsHeaders, 'Content-Type': 'application/json' },
+          });
+        }
+
+        // Upsert into system_config
+        const { error: upsertError } = await supabaseClient
+          .from('system_config')
+          .upsert({
+            key: 'license_keys',
+            value: { api_key: new_api_key, activation_key: new_activation_key },
+            updated_at: new Date().toISOString(),
+          }, { onConflict: 'key' });
+
+        if (upsertError) {
+          return new Response(JSON.stringify({ error: 'Falha ao salvar: ' + upsertError.message }), {
+            status: 500, headers: { ...corsHeaders, 'Content-Type': 'application/json' },
+          });
+        }
+
+        // Test connection with new keys
+        try {
+          const testRes = await fetch(`${EXTERNAL_API}/license?activation_key=${encodeURIComponent(new_activation_key)}`, {
+            headers: { 'x-api-key': new_api_key },
+          });
+          if (testRes.ok) {
+            const testData = await testRes.json();
+            return new Response(JSON.stringify({ success: true, license: testData.license }), {
+              headers: { ...corsHeaders, 'Content-Type': 'application/json' },
+            });
+          }
+          return new Response(JSON.stringify({ success: true, warning: 'Chaves salvas mas teste falhou' }), {
+            headers: { ...corsHeaders, 'Content-Type': 'application/json' },
+          });
+        } catch {
+          return new Response(JSON.stringify({ success: true, warning: 'Chaves salvas mas teste falhou' }), {
+            headers: { ...corsHeaders, 'Content-Type': 'application/json' },
+          });
+        }
+      }
+
       default:
         return new Response(JSON.stringify({ error: 'Ação inválida' }), {
           status: 400, headers: { ...corsHeaders, 'Content-Type': 'application/json' },
@@ -112,7 +177,6 @@ serve(async (req) => {
         });
       }
 
-      // If the external API returns JSON, pass it through
       if (contentType.includes('application/json')) {
         const json = await externalRes.json();
         const pixHeader = externalRes.headers.get('X-Pix-Copia-E-Cola') || null;
@@ -121,7 +185,6 @@ serve(async (req) => {
         });
       }
 
-      // Binary: convert to base64
       const buffer = await externalRes.arrayBuffer();
       const bytes = new Uint8Array(buffer);
       let binary = '';
@@ -140,7 +203,6 @@ serve(async (req) => {
       });
     }
 
-    // JSON responses - pass through
     if (!externalRes.ok) {
       const errText = await externalRes.text().catch(() => '');
       return new Response(JSON.stringify({ error: `Falha (${externalRes.status}): ${errText}` }), {

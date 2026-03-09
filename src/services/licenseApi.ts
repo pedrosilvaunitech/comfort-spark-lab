@@ -8,6 +8,7 @@ export interface LicenseConfig {
   toleranciaDiasAtraso: number;
 }
 
+// Only stores tolerance locally - keys go to DB via proxy
 export function getStoredConfig(): LicenseConfig {
   try {
     const stored = localStorage.getItem(LICENSE_CONFIG_KEY);
@@ -16,20 +17,28 @@ export function getStoredConfig(): LicenseConfig {
   return { apiKey: '', activationKey: '', toleranciaDiasAtraso: 5 };
 }
 
-export function saveConfig(config: LicenseConfig) {
+export function saveConfigLocal(config: LicenseConfig) {
   localStorage.setItem(LICENSE_CONFIG_KEY, JSON.stringify(config));
 }
 
-async function proxyRequest<T>(body: Record<string, any>): Promise<T> {
-  const config = getStoredConfig();
-  if (!config.apiKey || !config.activationKey) throw new Error('Licença não configurada');
-
+// Save keys securely to database via edge function
+export async function saveKeysToServer(apiKey: string, activationKey: string): Promise<{ success: boolean; license?: any; warning?: string }> {
   const { data, error } = await supabase.functions.invoke('license-proxy', {
     body: {
-      api_key: config.apiKey,
-      activation_key: config.activationKey,
-      ...body,
+      action: 'save_keys',
+      new_api_key: apiKey,
+      new_activation_key: activationKey,
     },
+  });
+  if (error) throw new Error(error.message || 'Falha ao salvar chaves');
+  if (data?.error) throw new Error(data.error);
+  return data;
+}
+
+// Client NEVER sends keys - proxy reads from DB
+async function proxyRequest<T>(body: Record<string, any>): Promise<T> {
+  const { data, error } = await supabase.functions.invoke('license-proxy', {
+    body,
   });
 
   if (error) throw new Error(error.message || 'Falha na requisição');
@@ -37,42 +46,29 @@ async function proxyRequest<T>(body: Record<string, any>): Promise<T> {
   return data as T;
 }
 
-export async function getLicense(activationKey?: string) {
-  const config = getStoredConfig();
-  return proxyRequest<{ license: any }>({
-    action: 'get_license',
-    activation_key: activationKey || config.activationKey,
-  });
+export async function getLicense() {
+  return proxyRequest<{ license: any }>({ action: 'get_license' });
 }
 
-export async function getPayments(activationKey?: string) {
-  const config = getStoredConfig();
-  return proxyRequest<{ payments: any[]; summary: any }>({
-    action: 'get_payments',
-    activation_key: activationKey || config.activationKey,
-  });
+export async function getPayments() {
+  return proxyRequest<{ payments: any[]; summary: any }>({ action: 'get_payments' });
 }
 
-export async function getPixImage(paymentId: string, activationKey?: string): Promise<{ imageUrl: string; pixCode: string | null }> {
-  const config = getStoredConfig();
+export async function getPixImage(paymentId: string): Promise<{ imageUrl: string; pixCode: string | null }> {
   try {
     const data = await proxyRequest<any>({
       action: 'get_pix',
       payment_id: paymentId,
-      activation_key: activationKey || config.activationKey,
     });
 
-    // Handle base64 binary response from proxy
     if (data.data_base64) {
       const binary = atob(data.data_base64);
       const bytes = new Uint8Array(binary.length);
       for (let i = 0; i < binary.length; i++) bytes[i] = binary.charCodeAt(i);
-      const ct = data.content_type || 'image/png';
-      const blob = new Blob([bytes], { type: ct });
+      const blob = new Blob([bytes], { type: data.content_type || 'image/png' });
       return { imageUrl: URL.createObjectURL(blob), pixCode: data.pix_copia_e_cola || null };
     }
 
-    // Handle JSON with URL/base64
     const imageUrl = data.qr_code_url || data.qrCodeUrl || data.image_url || data.imageUrl || '';
     const pixCode = data.pix_code || data.pixCode || data.copy_paste || data.pix_copia_e_cola || null;
     if (imageUrl) return { imageUrl, pixCode };
@@ -88,16 +84,13 @@ export async function getPixImage(paymentId: string, activationKey?: string): Pr
   }
 }
 
-export async function getBoletoPdf(paymentId: string, activationKey?: string): Promise<string> {
-  const config = getStoredConfig();
+export async function getBoletoPdf(paymentId: string): Promise<string> {
   try {
     const data = await proxyRequest<any>({
       action: 'get_boleto',
       payment_id: paymentId,
-      activation_key: activationKey || config.activationKey,
     });
 
-    // Handle base64 binary response
     if (data.data_base64) {
       const binary = atob(data.data_base64);
       const bytes = new Uint8Array(binary.length);
@@ -106,7 +99,6 @@ export async function getBoletoPdf(paymentId: string, activationKey?: string): P
       return URL.createObjectURL(blob);
     }
 
-    // Handle JSON with URL
     const url = data.boleto_url || data.boletoUrl || data.pdf_url || data.pdfUrl || data.url || '';
     if (url) return url;
 
@@ -117,19 +109,18 @@ export async function getBoletoPdf(paymentId: string, activationKey?: string): P
   }
 }
 
-export async function createTicket(activationKey: string, subject: string, message: string, priority = 'normal') {
-  return proxyRequest({ action: 'create_ticket', activation_key: activationKey, subject, message, priority });
+export async function createTicket(subject: string, message: string, priority = 'normal') {
+  return proxyRequest({ action: 'create_ticket', subject, message, priority });
 }
 
-export async function getTickets(activationKey?: string) {
-  const config = getStoredConfig();
-  return proxyRequest<{ tickets: any[] }>({ action: 'get_tickets', activation_key: activationKey || config.activationKey });
+export async function getTickets() {
+  return proxyRequest<{ tickets: any[] }>({ action: 'get_tickets' });
 }
 
 export async function getTicketMessages(ticketId: string) {
   return proxyRequest<{ messages: any[] }>({ action: 'get_ticket_messages', ticket_id: ticketId });
 }
 
-export async function sendMessage(ticketId: string, activationKey: string, message: string) {
-  return proxyRequest({ action: 'send_message', ticket_id: ticketId, activation_key: activationKey, message });
+export async function sendMessage(ticketId: string, message: string) {
+  return proxyRequest({ action: 'send_message', ticket_id: ticketId, message });
 }

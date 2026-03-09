@@ -7,7 +7,7 @@ import { Badge } from "@/components/ui/badge";
 import { Textarea } from "@/components/ui/textarea";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger } from "@/components/ui/dialog";
-import { getTickets, getTicketMessages, sendMessage, createTicket, getStoredConfig } from "@/services/licenseApi";
+import { getTickets, getTicketMessages, sendMessage, createTicket } from "@/services/licenseApi";
 import { useAuth } from "@/hooks/use-auth";
 import { Navigate, Link } from "react-router-dom";
 import { toast } from "sonner";
@@ -42,15 +42,10 @@ const Suporte = () => {
   useEffect(() => { messagesEnd.current?.scrollIntoView({ behavior: 'smooth' }); }, [messages]);
 
   const loadTickets = async () => {
-    const config = getStoredConfig();
-    if (!config.apiKey || !config.activationKey) {
-      setError("Licença não configurada. Configure em Configuração de Licença primeiro.");
-      return;
-    }
     setLoadingTickets(true);
     setError(null);
     try {
-      const res = await getTickets(config.activationKey);
+      const res = await getTickets();
       setTickets(res.tickets || []);
     } catch (err: any) {
       console.error('[Suporte] loadTickets error:', err);
@@ -71,10 +66,9 @@ const Suporte = () => {
 
   const handleSend = async () => {
     if (!newMsg.trim() || !selectedTicket) return;
-    const config = getStoredConfig();
     setSending(true);
     try {
-      await sendMessage(selectedTicket.id, config.activationKey, newMsg);
+      await sendMessage(selectedTicket.id, newMsg);
       setNewMsg('');
       await loadMessages(selectedTicket.id);
     } catch (err: any) {
@@ -86,10 +80,9 @@ const Suporte = () => {
 
   const handleCreate = async () => {
     if (!newSubject.trim() || !newMessage.trim()) return;
-    const config = getStoredConfig();
     setCreating(true);
     try {
-      await createTicket(config.activationKey, newSubject, newMessage, newPriority);
+      await createTicket(newSubject, newMessage, newPriority);
       toast.success("Ticket criado!");
       setNewTicketOpen(false);
       setNewSubject(''); setNewMessage(''); setNewPriority('normal');
