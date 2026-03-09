@@ -70,6 +70,8 @@ export function LicenseProvider({ children }: { children: React.ReactNode }) {
 
       const lic = licRes.license;
       setLicense(lic);
+      console.log('[License] payments raw:', JSON.stringify(payRes.payments?.slice(0, 2)));
+      console.log('[License] summary:', JSON.stringify(payRes.summary));
       setPayments(payRes.payments || []);
       setSummary(payRes.summary || null);
 

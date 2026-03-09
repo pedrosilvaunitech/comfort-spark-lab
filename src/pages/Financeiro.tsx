@@ -148,26 +148,29 @@ const Financeiro = () => {
                   <th className="text-left p-2">Ações</th>
                 </tr></thead>
                 <tbody>
-                  {payments.map((p: any) => (
-                    <tr key={p.id} className="border-b border-border">
-                      <td className="p-2">{p.reference_period || '—'}</td>
-                      <td className="p-2">{p.due_date ? new Date(p.due_date).toLocaleDateString('pt-BR') : '—'}</td>
-                      <td className="p-2 font-medium">R$ {Number(p.amount).toFixed(2)}</td>
+                  {payments.map((p: any, idx: number) => {
+                    const paymentId = p.id || p.payment_id || p.paymentId || `unknown-${idx}`;
+                    return (
+                    <tr key={paymentId} className="border-b border-border">
+                      <td className="p-2">{p.reference_period || p.description || '—'}</td>
+                      <td className="p-2">{(p.due_date || p.dueDate) ? new Date(p.due_date || p.dueDate).toLocaleDateString('pt-BR') : '—'}</td>
+                      <td className="p-2 font-medium">R$ {Number(p.amount || p.value || 0).toFixed(2)}</td>
                       <td className="p-2"><Badge variant={statusColor(p.status)}>{statusLabel(p.status)}</Badge></td>
                       <td className="p-2">
                         {(p.status === 'pending' || p.status === 'overdue') && (
                           <div className="flex gap-1">
-                            <Button size="sm" variant="outline" onClick={() => handlePix(p.id)} disabled={pixLoading === p.id}>
+                            <Button size="sm" variant="outline" onClick={() => { console.log('[Financeiro] PIX click, paymentId:', paymentId, 'full payment:', p); handlePix(paymentId); }} disabled={pixLoading === paymentId}>
                               <QrCode className="h-3 w-3 mr-1" /> PIX
                             </Button>
-                            <Button size="sm" variant="outline" onClick={() => handleBoleto(p.id)}>
+                            <Button size="sm" variant="outline" onClick={() => { console.log('[Financeiro] Boleto click, paymentId:', paymentId, 'full payment:', p); handleBoleto(paymentId); }}>
                               <FileText className="h-3 w-3 mr-1" /> Boleto
                             </Button>
                           </div>
                         )}
                       </td>
                     </tr>
-                  ))}
+                    );
+                  })}
                 </tbody>
               </table>
               {payments.length === 0 && <p className="text-center py-8 text-muted-foreground">Nenhum pagamento encontrado</p>}
