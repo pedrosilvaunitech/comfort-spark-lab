@@ -169,8 +169,8 @@ export function UserManagement() {
                   <p className="text-sm text-muted-foreground">{u.email}</p>
                   <div className="flex gap-1 mt-1">
                     {u.roles.map((r) => (
-                      <Badge key={r} variant={r === "admin" ? "default" : "secondary"}>
-                        {r === "admin" ? "Admin" : "Atendente"}
+                      <Badge key={r} variant={r === "admin" ? "default" : r === "gestor" ? "outline" : "secondary"}>
+                        {r === "admin" ? "Admin" : r === "gestor" ? "Gestor" : "Atendente"}
                       </Badge>
                     ))}
                     {u.roles.length === 0 && <Badge variant="outline">Sem função</Badge>}
