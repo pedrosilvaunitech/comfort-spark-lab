@@ -230,6 +230,17 @@ export function VoiceConfig() {
             )}
           </div>
 
+          <div className="flex items-center justify-between">
+            <div>
+              <Label>Falar a letra do prefixo (N, E, P...)</Label>
+              <p className="text-xs text-muted-foreground">Se desativado, fala apenas o número sem a letra identificadora</p>
+            </div>
+            <Switch
+              checked={settings.speakPrefix}
+              onCheckedChange={(v) => setSettings({ ...settings, speakPrefix: v })}
+            />
+          </div>
+
           <div>
             <Label className="mb-2 block">Formato do número</Label>
             <RadioGroup
