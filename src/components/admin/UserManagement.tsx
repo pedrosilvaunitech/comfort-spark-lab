@@ -22,7 +22,7 @@ export function UserManagement() {
   const [newName, setNewName] = useState("");
   const [newEmail, setNewEmail] = useState("");
   const [newPassword, setNewPassword] = useState("");
-  const [newRole, setNewRole] = useState<"admin" | "operator">("operator");
+  const [newRole, setNewRole] = useState<"admin" | "operator" | "gestor">("operator");
   const [creating, setCreating] = useState(false);
 
   // Edit states
