@@ -22,20 +22,39 @@ const Financeiro = () => {
 
   const handlePix = async (paymentId: string) => {
     const config = getStoredConfig();
+    if (!config.apiKey || !config.activationKey) {
+      toast.error("Licença não configurada");
+      return;
+    }
     setPixLoading(paymentId);
     try {
+      console.log('[Financeiro] Gerando PIX para payment:', paymentId);
       const data = await getPixImage(paymentId, config.activationKey);
+      console.log('[Financeiro] PIX data received:', data);
       setPixData(data);
-    } catch { toast.error("Falha ao gerar PIX"); }
-    finally { setPixLoading(null); }
+    } catch (err: any) {
+      console.error('[Financeiro] PIX error:', err);
+      toast.error(err.message || "Falha ao gerar PIX");
+    } finally {
+      setPixLoading(null);
+    }
   };
 
   const handleBoleto = async (paymentId: string) => {
     const config = getStoredConfig();
+    if (!config.apiKey || !config.activationKey) {
+      toast.error("Licença não configurada");
+      return;
+    }
     try {
+      console.log('[Financeiro] Gerando boleto para payment:', paymentId);
       const url = await getBoletoPdf(paymentId, config.activationKey);
+      console.log('[Financeiro] Boleto URL:', url);
       window.open(url, '_blank');
-    } catch { toast.error("Falha ao gerar boleto"); }
+    } catch (err: any) {
+      console.error('[Financeiro] Boleto error:', err);
+      toast.error(err.message || "Falha ao gerar boleto");
+    }
   };
 
   const handleCopyPix = () => {
