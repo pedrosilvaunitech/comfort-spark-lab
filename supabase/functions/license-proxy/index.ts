@@ -225,16 +225,18 @@ serve(async (req) => {
     const fetchOptions: RequestInit = { method, headers };
     if (fetchBody) fetchOptions.body = fetchBody;
 
+    console.log('[license-proxy] fetching:', method, targetUrl);
     const externalRes = await fetch(targetUrl, fetchOptions);
     const contentType = externalRes.headers.get('content-type') || '';
+    console.log('[license-proxy] response status:', externalRes.status, 'content-type:', contentType);
 
     // For binary responses (PIX image, Boleto PDF), convert to base64
     if (action === 'get_pix' || action === 'get_boleto') {
       if (!externalRes.ok) {
         const errText = await externalRes.text().catch(() => '');
+        console.error('[license-proxy] PIX/Boleto error:', externalRes.status, errText);
         return new Response(JSON.stringify({ error: `Falha (${externalRes.status}): ${errText}` }), {
-          status: externalRes.status,
-          headers: { ...corsHeaders, 'Content-Type': 'application/json' },
+          status: 200, headers: { ...corsHeaders, 'Content-Type': 'application/json' },
         });
       }
 
