@@ -9,7 +9,7 @@ import { useLicense } from "@/contexts/LicenseContext";
 import { useAuth } from "@/hooks/use-auth";
 import { Navigate, Link } from "react-router-dom";
 import { toast } from "sonner";
-import { Save, TestTube, ArrowLeft, Shield, Building2, Calendar, Key } from "lucide-react";
+import { Save, TestTube, ArrowLeft, Shield, Building2, Calendar, Key, DollarSign } from "lucide-react";
 
 const LicenseSettings = () => {
   const { user, loading: authLoading, isAdmin } = useAuth();
