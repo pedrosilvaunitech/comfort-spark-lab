@@ -1,5 +1,5 @@
 import React, { createContext, useContext, useState, useEffect, useCallback } from "react";
-import { getLicense, getPayments, getPixImage, getBoletoPdf, getStoredConfig } from "@/services/licenseApi";
+import { getLicense, getPayments, getPixImage, getBoletoPdf, getConfigFromServer } from "@/services/licenseApi";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import { AlertTriangle, RefreshCw, QrCode, FileText, Copy, Check, Key } from "lucide-react";
