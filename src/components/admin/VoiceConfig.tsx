@@ -57,20 +57,22 @@ export function formatTicketForSpeech(displayNumber: string, settings: VoiceSett
       break;
   }
 
+  const letterPrefix = settings.speakPrefix ? prefix : "";
+
   let spokenPrefix: string;
   switch (settings.prefixFormat) {
     case "numero":
-      spokenPrefix = `${prefix} número`;
+      spokenPrefix = letterPrefix ? `${letterPrefix} número` : "número";
       break;
     case "senha_numero":
-      spokenPrefix = `Senha número ${prefix}`;
+      spokenPrefix = letterPrefix ? `Senha número ${letterPrefix}` : "Senha número";
       break;
     case "custom":
-      spokenPrefix = settings.customPrefix || prefix;
+      spokenPrefix = settings.customPrefix || letterPrefix;
       break;
     case "senha":
     default:
-      spokenPrefix = `Senha ${prefix}`;
+      spokenPrefix = letterPrefix ? `Senha ${letterPrefix}` : "Senha";
       break;
   }
 
