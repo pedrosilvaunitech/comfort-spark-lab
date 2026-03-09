@@ -17,17 +17,63 @@ export interface VoiceSettings {
   pitch: number;
   beepEnabled: boolean;
   repeatCount: number;
-  voiceName: string; // selected voice name
+  voiceName: string;
+  numberFormat: "full" | "no_zeros" | "digit_by_digit";
+  // e.g. "full" = "0001", "no_zeros" = "1", "digit_by_digit" = "0 0 0 1"
+  prefixFormat: "senha" | "numero" | "senha_numero" | "custom";
+  customPrefix: string;
 }
 
-const defaultVoiceSettings: VoiceSettings = {
-  template: "Senha {senha}, dirija-se ao {guiche}",
+export const defaultVoiceSettings: VoiceSettings = {
+  template: "{prefixo} {senha}, dirija-se ao {guiche}",
   rate: 0.9,
   pitch: 1,
   beepEnabled: true,
   repeatCount: 1,
   voiceName: "",
+  numberFormat: "no_zeros",
+  prefixFormat: "senha",
+  customPrefix: "",
 };
+
+export function formatTicketForSpeech(displayNumber: string, settings: VoiceSettings): string {
+  const prefix = displayNumber.replace(/[0-9]/g, "").trim();
+  const numStr = displayNumber.replace(/[^0-9]/g, "");
+  const num = parseInt(numStr, 10);
+
+  let spokenNumber: string;
+  switch (settings.numberFormat) {
+    case "full":
+      spokenNumber = numStr; // "0001"
+      break;
+    case "digit_by_digit":
+      spokenNumber = numStr.split("").join(" "); // "0 0 0 1"
+      break;
+    case "no_zeros":
+    default:
+      spokenNumber = String(num); // "1"
+      break;
+  }
+
+  let spokenPrefix: string;
+  switch (settings.prefixFormat) {
+    case "numero":
+      spokenPrefix = `${prefix} número`;
+      break;
+    case "senha_numero":
+      spokenPrefix = `Senha número ${prefix}`;
+      break;
+    case "custom":
+      spokenPrefix = settings.customPrefix || prefix;
+      break;
+    case "senha":
+    default:
+      spokenPrefix = `Senha ${prefix}`;
+      break;
+  }
+
+  return `${spokenPrefix} ${spokenNumber}`;
+}
 
 export function VoiceConfig() {
   const [settings, setSettings] = useState<VoiceSettings>(defaultVoiceSettings);
