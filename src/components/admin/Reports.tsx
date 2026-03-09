@@ -3,7 +3,12 @@ import { supabase } from "@/integrations/supabase/client";
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
-import { RefreshCw, Users, Clock, CheckCircle, XCircle, TrendingUp, Timer } from "lucide-react";
+import { Calendar } from "@/components/ui/calendar";
+import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover";
+import { RefreshCw, Users, Clock, CheckCircle, XCircle, TrendingUp, Timer, CalendarIcon } from "lucide-react";
+import { format, subDays, startOfMonth, startOfWeek, endOfDay } from "date-fns";
+import { ptBR } from "date-fns/locale";
+import { cn } from "@/lib/utils";
 import {
   BarChart, Bar, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer,
   PieChart, Pie, Cell, Legend, LineChart, Line,
@@ -19,6 +24,8 @@ const COLORS = [
   "hsl(199, 89%, 48%)",
 ];
 
+type DatePreset = "today" | "yesterday" | "week" | "month" | "custom";
+
 export function Reports() {
   const [stats, setStats] = useState<any>({
     total: 0, waiting: 0, called: 0, inService: 0, completed: 0, noShow: 0, cancelled: 0,
@@ -26,20 +33,60 @@ export function Reports() {
   const [operatorStats, setOperatorStats] = useState<any[]>([]);
   const [serviceStats, setServiceStats] = useState<any[]>([]);
   const [hourlyStats, setHourlyStats] = useState<any[]>([]);
+  const [dailyStats, setDailyStats] = useState<any[]>([]);
   const [avgWaitTime, setAvgWaitTime] = useState<number>(0);
   const [avgServiceTime, setAvgServiceTime] = useState<number>(0);
   const [loading, setLoading] = useState(false);
+  const [preset, setPreset] = useState<DatePreset>("today");
+  const [dateFrom, setDateFrom] = useState<Date>(new Date());
+  const [dateTo, setDateTo] = useState<Date>(new Date());
 
   useEffect(() => { loadStats(); }, []);
 
-  const loadStats = async () => {
-    setLoading(true);
-    const today = new Date().toISOString().split("T")[0];
+  const applyPreset = (p: DatePreset) => {
+    setPreset(p);
+    const now = new Date();
+    let from = now, to = now;
+    switch (p) {
+      case "today": from = now; to = now; break;
+      case "yesterday": from = subDays(now, 1); to = subDays(now, 1); break;
+      case "week": from = startOfWeek(now, { weekStartsOn: 1 }); to = now; break;
+      case "month": from = startOfMonth(now); to = now; break;
+      default: return;
+    }
+    setDateFrom(from);
+    setDateTo(to);
+    loadStatsForRange(from, to);
+  };
 
-    const { data: tickets } = await supabase
-      .from("tickets")
-      .select("*, counters(*), service_types(*)")
-      .gte("created_at", `${today}T00:00:00`);
+  const handleCustomRange = () => {
+    setPreset("custom");
+    loadStatsForRange(dateFrom, dateTo);
+  };
+
+  const loadStats = () => loadStatsForRange(dateFrom, dateTo);
+
+  const loadStatsForRange = async (from: Date, to: Date) => {
+    setLoading(true);
+    const fromStr = format(from, "yyyy-MM-dd") + "T00:00:00";
+    const toStr = format(to, "yyyy-MM-dd") + "T23:59:59";
+
+    // Fetch in pages if needed (handle >1000 rows)
+    let all: any[] = [];
+    let page = 0;
+    const pageSize = 1000;
+    while (true) {
+      const { data } = await supabase
+        .from("tickets")
+        .select("*, counters(*), service_types(*)")
+        .gte("created_at", fromStr)
+        .lte("created_at", toStr)
+        .range(page * pageSize, (page + 1) * pageSize - 1);
+      const batch = data || [];
+      all = all.concat(batch);
+      if (batch.length < pageSize) break;
+      page++;
+    }
 
     const all = tickets || [];
 
