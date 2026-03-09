@@ -177,6 +177,14 @@ export function Reports() {
         .map(([hour, count]) => ({ hour: `${hour}h`, count }))
     );
 
+    // Daily distribution (for multi-day ranges)
+    const dayMap = new Map<string, number>();
+    all.forEach((t) => {
+      const day = format(new Date(t.created_at), "dd/MM");
+      dayMap.set(day, (dayMap.get(day) || 0) + 1);
+    });
+    setDailyStats(Array.from(dayMap.entries()).map(([day, count]) => ({ day, count })));
+
     setLoading(false);
   };
 
