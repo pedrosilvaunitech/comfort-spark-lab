@@ -126,22 +126,12 @@ export function VoiceConfig() {
     }
   };
 
-  const getPreviewText = () => {
-    const spokenPart = formatTicketForSpeech("N0001", settings);
+  const getPreviewTextFull = (displayNumber = "N0001") => {
+    const prefix = formatPrefixForSpeech(settings);
+    const number = formatNumberForSpeech(displayNumber, settings);
     return settings.template
-      .replace("{prefixo}", "")
-      .replace("{senha}", spokenPart)
-      .replace("{guiche}", "Guichê 1")
-      .replace(/\s+/g, " ")
-      .trim();
-  };
-
-  const getPreviewTextFull = () => {
-    const spokenPart = formatTicketForSpeech("N0001", settings);
-    return settings.template
-      .replace("{prefixo} {senha}", spokenPart)
-      .replace("{prefixo}", "")
-      .replace("{senha}", spokenPart)
+      .replace("{prefixo}", prefix)
+      .replace("{senha}", number)
       .replace("{guiche}", "Guichê 1")
       .replace(/\s+/g, " ")
       .trim();
