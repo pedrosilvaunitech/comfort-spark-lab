@@ -209,6 +209,7 @@ export function UserManagement() {
                 <SelectTrigger><SelectValue /></SelectTrigger>
                 <SelectContent>
                   <SelectItem value="operator">Atendente</SelectItem>
+                  <SelectItem value="gestor">Gestor</SelectItem>
                   <SelectItem value="admin">Administrador</SelectItem>
                 </SelectContent>
               </Select>
