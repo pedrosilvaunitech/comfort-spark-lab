@@ -1,0 +1,1 @@
+ALTER TABLE public.tickets ADD COLUMN custom_voice_text TEXT DEFAULT NULL;
