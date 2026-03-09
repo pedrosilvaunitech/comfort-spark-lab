@@ -1,7 +1,7 @@
 import { useRealtimeTickets } from "@/hooks/use-realtime-tickets";
 import { useEffect, useRef, useState } from "react";
 import { getSystemConfig } from "@/lib/ticket-service";
-import { type VoiceSettings, defaultVoiceSettings, formatTicketForSpeech } from "@/components/admin/VoiceConfig";
+import { type VoiceSettings, defaultVoiceSettings, formatPrefixForSpeech, formatNumberForSpeech } from "@/components/admin/VoiceConfig";
 
 function parseTicketNumber(displayNumber: string): string {
   const prefix = displayNumber.replace(/[0-9]/g, "");
