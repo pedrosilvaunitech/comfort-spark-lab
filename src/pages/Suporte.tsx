@@ -25,6 +25,9 @@ const Suporte = () => {
   const [newMessage, setNewMessage] = useState('');
   const [newPriority, setNewPriority] = useState('normal');
   const [creating, setCreating] = useState(false);
+  const [loadingTickets, setLoadingTickets] = useState(false);
+  const [loadingMessages, setLoadingMessages] = useState(false);
+  const [error, setError] = useState<string | null>(null);
   const messagesEnd = useRef<HTMLDivElement>(null);
 
   useEffect(() => { loadTickets(); }, []);
@@ -40,18 +43,30 @@ const Suporte = () => {
 
   const loadTickets = async () => {
     const config = getStoredConfig();
-    if (!config.activationKey) return;
+    if (!config.apiKey || !config.activationKey) {
+      setError("Licença não configurada. Configure em Configuração de Licença primeiro.");
+      return;
+    }
+    setLoadingTickets(true);
+    setError(null);
     try {
       const res = await getTickets(config.activationKey);
       setTickets(res.tickets || []);
-    } catch { }
+    } catch (err: any) {
+      console.error('[Suporte] loadTickets error:', err);
+      setError(err.message || "Falha ao carregar tickets");
+    } finally {
+      setLoadingTickets(false);
+    }
   };
 
   const loadMessages = async (ticketId: string) => {
     try {
       const res = await getTicketMessages(ticketId);
       setMessages(res.messages || []);
-    } catch { }
+    } catch (err: any) {
+      console.error('[Suporte] loadMessages error:', err);
+    }
   };
 
   const handleSend = async () => {
