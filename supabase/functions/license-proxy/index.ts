@@ -85,7 +85,16 @@ serve(async (req) => {
     }
 
     // Get keys from database (server-side only)
-    const { api_key, activation_key } = await getLicenseKeys(supabaseClient);
+    let api_key: string, activation_key: string;
+    try {
+      const keys = await getLicenseKeys(supabaseClient);
+      api_key = keys.api_key;
+      activation_key = keys.activation_key;
+    } catch (e) {
+      return new Response(JSON.stringify({ error: e.message, not_configured: true }), {
+        status: 200, headers: { ...corsHeaders, 'Content-Type': 'application/json' },
+      });
+    }
 
     const headers: Record<string, string> = {
       'x-api-key': api_key,
