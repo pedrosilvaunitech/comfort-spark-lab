@@ -85,7 +85,7 @@ export function LicenseProvider({ children }: { children: React.ReactNode }) {
         if (p.status !== 'overdue') return false;
         const due = new Date(p.due_date);
         const diffDays = Math.floor((now.getTime() - due.getTime()) / (1000 * 60 * 60 * 24));
-        return diffDays > config.toleranciaDiasAtraso;
+        return diffDays > serverConfig.tolerancia_dias;
       });
 
       setOverduePayments(overdue);
