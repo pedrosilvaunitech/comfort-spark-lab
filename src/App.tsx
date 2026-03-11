@@ -13,6 +13,7 @@ import Login from "./pages/Login";
 import SetupAdmin from "./pages/SetupAdmin";
 import LicenseSettings from "./pages/LicenseSettings";
 import Financeiro from "./pages/Financeiro";
+import Install from "./pages/Install";
 import Suporte from "./pages/Suporte";
 import NotFound from "./pages/NotFound";
 
@@ -34,6 +35,7 @@ const App = () => (
             <Route path="/admin" element={<Admin />} />
             <Route path="/setup" element={<SetupAdmin />} />
             <Route path="/license-settings" element={<LicenseSettings />} />
+            <Route path="/install" element={<Install />} />
             <Route path="/financeiro" element={<Financeiro />} />
             <Route path="/suporte" element={<Suporte />} />
             <Route path="*" element={<NotFound />} />
