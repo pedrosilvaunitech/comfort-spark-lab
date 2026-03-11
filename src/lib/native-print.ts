@@ -29,8 +29,9 @@ export function hasWebUsb(): boolean {
 let cachedUsbDevice: any = null;
 
 const KNOWN_PRINTER_FILTERS = [
+  { vendorId: 0x0483, productId: 0x7540 }, // PT80KM POS80 (vid=1155 pid=30016)
+  { vendorId: 0x0483 }, // STMicroelectronics (POS80 variants)
   { vendorId: 0x0416 },
-  { vendorId: 0x0483 },
   { vendorId: 0x1FC9 },
   { vendorId: 0x04B8 },
   { vendorId: 0x0DD4 },
