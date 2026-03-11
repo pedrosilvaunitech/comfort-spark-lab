@@ -32,25 +32,25 @@ const Index = () => {
   ];
 
   return (
-    <main className="min-h-screen bg-background flex flex-col items-center justify-center p-6">
-      <header className="text-center mb-10">
-        <img src={logo} alt="UniSistemas - UniTechBR" className="h-24 mx-auto mb-4 object-contain" />
-        <h1 className="text-4xl font-bold text-foreground mb-2">
+    <main className="min-h-screen min-h-[100dvh] bg-background flex flex-col items-center justify-center p-[4vw]">
+      <header className="text-center mb-[4vh]">
+        <img src={logo} alt="UniSistemas - UniTechBR" className="h-[clamp(4rem,10vh,8rem)] mx-auto mb-[2vh] object-contain" />
+        <h1 className="text-[clamp(1.5rem,4vw,3rem)] font-bold text-foreground mb-2">
           UniTechBR
         </h1>
-        <p className="text-muted-foreground text-lg">
+        <p className="text-muted-foreground text-[clamp(0.9rem,1.5vw,1.3rem)]">
           Sistema de Gerenciamento de Filas
         </p>
       </header>
 
-      <div className="grid grid-cols-1 sm:grid-cols-2 gap-6 max-w-2xl w-full">
+      <div className="grid grid-cols-1 sm:grid-cols-2 gap-[clamp(1rem,2vw,2rem)] w-full max-w-[min(40rem,90vw)]">
         {pages.map((page) => (
           <Link key={page.path} to={page.path}>
             <Card className="h-full transition-all duration-200 hover:scale-[1.02] hover:shadow-lg cursor-pointer border-2 border-transparent hover:border-primary">
-              <CardContent className="flex flex-col items-center text-center p-8 gap-3">
+              <CardContent className="flex flex-col items-center text-center p-[clamp(1.5rem,3vw,3rem)] gap-[1vh]">
                 <div className="text-primary">{page.icon}</div>
-                <h2 className="text-xl font-bold text-card-foreground">{page.title}</h2>
-                <p className="text-sm text-muted-foreground">{page.description}</p>
+                <h2 className="text-[clamp(1rem,2vw,1.5rem)] font-bold text-card-foreground">{page.title}</h2>
+                <p className="text-[clamp(0.75rem,1.2vw,1rem)] text-muted-foreground">{page.description}</p>
               </CardContent>
             </Card>
           </Link>

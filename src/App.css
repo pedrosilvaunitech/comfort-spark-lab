@@ -1,40 +1,22 @@
 #root {
   width: 100%;
   min-height: 100vh;
+  min-height: 100dvh;
 }
 
-.logo {
-  height: 6em;
-  padding: 1.5em;
-  will-change: filter;
-  transition: filter 300ms;
-}
-.logo:hover {
-  filter: drop-shadow(0 0 2em #646cffaa);
-}
-.logo.react:hover {
-  filter: drop-shadow(0 0 2em #61dafbaa);
+/* Fluid responsive root */
+html {
+  font-size: clamp(14px, 1.2vw + 0.5vh, 18px);
 }
 
-@keyframes logo-spin {
-  from {
-    transform: rotate(0deg);
-  }
-  to {
-    transform: rotate(360deg);
-  }
+@media (max-width: 480px) {
+  html { font-size: clamp(12px, 3.5vw, 16px); }
 }
 
-@media (prefers-reduced-motion: no-preference) {
-  a:nth-of-type(2) .logo {
-    animation: logo-spin infinite 20s linear;
-  }
+@media (min-width: 1920px) {
+  html { font-size: clamp(16px, 0.9vw, 22px); }
 }
 
-.card {
-  padding: 2em;
-}
-
-.read-the-docs {
-  color: #888;
+@media (min-width: 2560px) {
+  html { font-size: clamp(18px, 0.7vw, 24px); }
 }
