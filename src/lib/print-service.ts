@@ -295,16 +295,21 @@ export async function printTicket(
   preferredMethod?: PrintMethod
 ): Promise<{ success: boolean; method: string }> {
   // Check local device config first (totem-level config)
-  const localPrinter = getLocalPrinterConfig();
   const hasLocalPrinter = isLocalPrinterPaired() && hasWebUsb();
 
-  // If local printer is paired, use it directly — no server config needed
+  // If local printer is paired, use WebUSB directly — NEVER fall back to browser popup
   if (hasLocalPrinter && !preferredMethod) {
     try {
       const success = await printViaWebUsbMethod(ticket);
       if (success) return { success: true, method: "webusb" };
-    } catch {
-      // Fall through to other methods
+      // WebUSB failed — log but do NOT open browser popup
+      console.warn("[Print] WebUSB falhou. Impressora pareada mas não respondeu. Verifique a conexão USB.");
+      await logPrint(ticket.id, "failed", "webusb", "Impressora pareada mas não respondeu");
+      return { success: false, method: "webusb" };
+    } catch (err: any) {
+      console.error("[Print] WebUSB error:", err);
+      await logPrint(ticket.id, "failed", "webusb", err.message);
+      return { success: false, method: "webusb" };
     }
   }
 
@@ -317,11 +322,15 @@ export async function printTicket(
   const defaultMethod = isAndroid() ? "android_usb" : hasWebUsb() ? "webusb" : "browser";
   const method = preferredMethod || defaultMethod;
 
+  // Build fallback chain — exclude browser popup when WebUSB/Android is expected
+  const useSilentOnly = method === "webusb" || method === "android_usb";
+
   const methods: { name: PrintMethod; fn: () => Promise<boolean> }[] = [
     ...(isAndroid() ? [{ name: "android_usb" as PrintMethod, fn: () => printViaAndroidUsbMethod(ticket) }] : []),
     ...(hasWebUsb() ? [{ name: "webusb" as PrintMethod, fn: () => printViaWebUsbMethod(ticket) }] : []),
     { name: "print_server", fn: () => printViaPrintServer(ticket) },
-    { name: "browser", fn: () => printViaBrowser(ticket) },
+    // Only include browser popup if not using direct printing methods
+    ...(!useSilentOnly ? [{ name: "browser" as PrintMethod, fn: () => printViaBrowser(ticket) }] : []),
     { name: "cloud", fn: () => printViaCloud(ticket) },
   ];
 
@@ -332,7 +341,7 @@ export async function printTicket(
     if (success) return { success: true, method: preferred.name };
   }
 
-  // Fallback: try others
+  // Fallback: try others (no browser popup in silent mode)
   for (const m of methods) {
     if (m.name === method) continue;
     try {
