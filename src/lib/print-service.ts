@@ -185,14 +185,19 @@ export async function printViaPrintServer(ticket: Ticket, serverUrl?: string): P
   }
 }
 
-// ============ METHOD 3: Cloud Edge Function ============
+// ============ METHOD 3: Edge Function (works local & cloud) ============
 export async function printViaCloud(ticket: Ticket): Promise<boolean> {
   try {
-    const projectId = import.meta.env.VITE_SUPABASE_PROJECT_ID;
+    const supabaseUrl = import.meta.env.VITE_SUPABASE_URL;
     const anonKey = import.meta.env.VITE_SUPABASE_PUBLISHABLE_KEY;
 
+    if (!supabaseUrl || !anonKey) {
+      await logPrint(ticket.id, "failed", "cloud", "SUPABASE_URL ou ANON_KEY não configurados");
+      return false;
+    }
+
     const response = await fetch(
-      `https://${projectId}.supabase.co/functions/v1/print-ticket`,
+      `${supabaseUrl}/functions/v1/print-ticket`,
       {
         method: "POST",
         headers: {
