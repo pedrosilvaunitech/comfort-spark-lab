@@ -63,8 +63,8 @@ const Install = () => {
     <div className="min-h-screen bg-background flex items-center justify-center p-6">
       <Card className="w-full max-w-md">
         <CardHeader className="text-center">
-          <img src="/pwa-icon-192.png" alt="UniTech" className="h-20 w-20 mx-auto mb-4 rounded-2xl" />
-          <CardTitle>Instalar UniTech</CardTitle>
+          <img src="/logo.png" alt="UniTechBR" className="h-20 w-auto mx-auto mb-4 object-contain" />
+          <CardTitle>Instalar UniTechBR</CardTitle>
           <CardDescription>
             Instale o app no seu dispositivo para acesso rápido e funcionamento offline.
           </CardDescription>
