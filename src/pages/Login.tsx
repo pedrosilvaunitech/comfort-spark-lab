@@ -172,8 +172,8 @@ const Login = () => {
     return (
       <div className="min-h-screen bg-background flex items-center justify-center p-6">
         <Card className="w-full max-w-sm">
-          <CardHeader className="text-center">
-            <Shield className="h-8 w-8 mx-auto text-primary mb-2" />
+        <CardHeader className="text-center">
+            <img src="/logo.png" alt="UniTechBR" className="h-16 mx-auto mb-2 object-contain" />
             <CardTitle>Configuração Inicial</CardTitle>
             <CardDescription>Crie o primeiro administrador do sistema</CardDescription>
           </CardHeader>

@@ -1,6 +1,7 @@
 import { Link } from "react-router-dom";
 import { Card, CardContent } from "@/components/ui/card";
 import { Monitor, Printer, Settings, Users } from "lucide-react";
+import logo from "@/assets/logo.png";
 
 const Index = () => {
   const pages = [
@@ -33,11 +34,12 @@ const Index = () => {
   return (
     <main className="min-h-screen bg-background flex flex-col items-center justify-center p-6">
       <header className="text-center mb-10">
+        <img src={logo} alt="UniSistemas - UniTechBR" className="h-24 mx-auto mb-4 object-contain" />
         <h1 className="text-4xl font-bold text-foreground mb-2">
-          Sistema de Senhas
+          UniTechBR
         </h1>
         <p className="text-muted-foreground text-lg">
-          Gerenciamento de filas com impressão térmica
+          Sistema de Gerenciamento de Filas
         </p>
       </header>
 
