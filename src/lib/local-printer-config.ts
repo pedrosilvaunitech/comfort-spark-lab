@@ -18,10 +18,10 @@ export interface LocalPrinterConfig {
 }
 
 const defaultConfig: LocalPrinterConfig = {
-  paired: false,
-  deviceName: "",
-  vendorId: 0,
-  productId: 0,
+  paired: true,
+  deviceName: "PT80KM POS80 Thermal Kiosk Printer",
+  vendorId: 1155,   // 0x0483
+  productId: 30016,  // 0x7540
   autoCut: true,
   paperSize: "80mm",
   printName: true,
