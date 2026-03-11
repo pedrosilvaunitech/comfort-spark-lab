@@ -124,8 +124,9 @@ const Panel = () => {
   }, []);
 
   useEffect(() => {
-    if (lastCalled && lastCalled.id !== lastCalledIdRef.current) {
-      lastCalledIdRef.current = lastCalled.id;
+    const calledKey = lastCalled ? `${lastCalled.id}_${(lastCalled as any).called_at}` : null;
+    if (lastCalled && calledKey !== lastCalledKeyRef.current) {
+      lastCalledKeyRef.current = calledKey;
       const counterName = (lastCalled as any).counters?.name || "guichê";
       const customText = (lastCalled as any).custom_voice_text;
       console.log("[Panel] lastCalled ticket:", lastCalled.id, "custom_voice_text:", customText);
