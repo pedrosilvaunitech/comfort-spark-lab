@@ -168,43 +168,43 @@ const Panel = () => {
   const ticketColorStyle = screenConfig.panelTicketColor ? { color: screenConfig.panelTicketColor } : {};
 
   return (
-    <div className="min-h-screen bg-primary flex flex-col" style={bgStyle}>
+    <div className="min-h-screen min-h-[100dvh] bg-primary flex flex-col" style={bgStyle}>
       {/* Header with logo/title */}
       {(screenConfig.panelShowLogo && screenConfig.logoUrl) || screenConfig.panelTitle ? (
-        <div className="flex items-center justify-center gap-4 py-4 px-6">
+        <div className="flex items-center justify-center gap-4 py-[1.5vh] px-[2vw]">
           {screenConfig.panelShowLogo && screenConfig.logoUrl && (
-            <img src={screenConfig.logoUrl} alt="Logo" className="h-12 object-contain" />
+            <img src={screenConfig.logoUrl} alt="Logo" className="h-[5vh] object-contain" />
           )}
           {screenConfig.panelTitle && (
-            <h1 className="text-2xl font-bold text-primary-foreground" style={textStyle}>
+            <h1 className="text-[2.5vw] font-bold text-primary-foreground" style={textStyle}>
               {screenConfig.panelTitle}
             </h1>
           )}
         </div>
       ) : null}
 
-      <div className="flex-1 flex flex-col items-center justify-center px-8 py-6">
+      <div className="flex-1 flex flex-col items-center justify-center px-[3vw] py-[2vh]">
         {currentCalled ? (
           <div className={`text-center ${lastCalled?.id === currentCalled.id ? "animate-flash-call" : ""}`}>
-            <p className="text-2xl md:text-3xl font-semibold text-primary-foreground/80 italic mb-2" style={textStyle ? { ...textStyle, opacity: 0.8 } : {}}>
+            <p className="text-[clamp(1rem,3vw,2.5rem)] font-semibold text-primary-foreground/80 italic mb-[1vh]" style={textStyle ? { ...textStyle, opacity: 0.8 } : {}}>
               {getServiceTypeName(currentCalled)}
             </p>
-            <div className="flex items-center justify-center gap-6 md:gap-10">
+            <div className="flex items-center justify-center gap-[3vw]">
               <span
-                className="text-[8rem] md:text-[12rem] lg:text-[16rem] font-black text-warning leading-none tracking-wider"
+                className="text-[clamp(4rem,15vw,20rem)] font-black text-warning leading-none tracking-wider"
                 style={ticketColorStyle}
               >
                 {currentCalled.display_number}
               </span>
               <div className="text-right">
-                <p className="text-3xl md:text-5xl lg:text-6xl font-bold text-primary-foreground" style={textStyle}>
+                <p className="text-[clamp(1.5rem,5vw,5rem)] font-bold text-primary-foreground" style={textStyle}>
                   {getCounterName(currentCalled)}
                 </p>
               </div>
             </div>
           </div>
         ) : (
-          <p className="text-3xl md:text-5xl text-primary-foreground/60 font-semibold" style={textStyle ? { ...textStyle, opacity: 0.6 } : {}}>
+          <p className="text-[clamp(1.5rem,4vw,4rem)] text-primary-foreground/60 font-semibold" style={textStyle ? { ...textStyle, opacity: 0.6 } : {}}>
             Aguardando chamada...
           </p>
         )}
@@ -214,18 +214,18 @@ const Panel = () => {
         <div className="grid grid-cols-4 divide-x divide-primary-foreground/20">
           {recentCalled.length > 0
             ? recentCalled.map((t: any) => (
-                <div key={t.id} className="flex flex-col items-center justify-center py-6 px-2">
-                  <span className="text-5xl md:text-7xl font-black text-primary-foreground tracking-wider" style={textStyle}>
+                <div key={t.id} className="flex flex-col items-center justify-center py-[2vh] px-[1vw]">
+                  <span className="text-[clamp(2rem,5vw,6rem)] font-black text-primary-foreground tracking-wider" style={textStyle}>
                     {t.display_number}
                   </span>
-                  <span className="text-lg md:text-xl font-semibold text-primary-foreground/70 mt-2" style={textStyle ? { ...textStyle, opacity: 0.7 } : {}}>
+                  <span className="text-[clamp(0.8rem,1.5vw,1.5rem)] font-semibold text-primary-foreground/70 mt-[0.5vh]" style={textStyle ? { ...textStyle, opacity: 0.7 } : {}}>
                     {t.counters?.name || "Guichê"}
                   </span>
                 </div>
               ))
             : Array.from({ length: 4 }).map((_, i) => (
-                <div key={i} className="flex items-center justify-center py-6 px-2">
-                  <span className="text-3xl text-primary-foreground/30" style={textStyle ? { ...textStyle, opacity: 0.3 } : {}}>—</span>
+                <div key={i} className="flex items-center justify-center py-[2vh] px-[1vw]">
+                  <span className="text-[clamp(1.5rem,3vw,3rem)] text-primary-foreground/30" style={textStyle ? { ...textStyle, opacity: 0.3 } : {}}>—</span>
                 </div>
               ))}
         </div>
