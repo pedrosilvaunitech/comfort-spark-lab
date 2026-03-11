@@ -11,7 +11,8 @@ import { Printer, User, FileText, Heart, ArrowLeft } from "lucide-react";
 import { useScreenConfig } from "@/hooks/use-screen-config";
 import { useKioskMode } from "@/lib/kiosk-mode";
 import { useNavigate } from "react-router-dom";
-import { isLocalPrinterPaired } from "@/lib/local-printer-config";
+import { isLocalPrinterPaired, getLocalPrinterConfig } from "@/lib/local-printer-config";
+import { autoConnectWebUsbPrinter } from "@/lib/native-print";
 
 type Step = "select_type" | "optional_info" | "ticket_generated";
 
