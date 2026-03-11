@@ -102,7 +102,7 @@ async function speakTicket(displayNumber: string, counterName: string, settings:
 
 const Panel = () => {
   const { calledTickets, lastCalled } = useRealtimeTickets();
-  const lastCalledIdRef = useRef<string | null>(null);
+  const lastCalledKeyRef = useRef<string | null>(null);
   const [voicesLoaded, setVoicesLoaded] = useState(false);
   const voiceSettingsRef = useRef<VoiceSettings>(defaultVoiceSettings);
   const { config: screenConfig } = useScreenConfig();
@@ -124,8 +124,9 @@ const Panel = () => {
   }, []);
 
   useEffect(() => {
-    if (lastCalled && lastCalled.id !== lastCalledIdRef.current) {
-      lastCalledIdRef.current = lastCalled.id;
+    const calledKey = lastCalled ? `${lastCalled.id}_${(lastCalled as any).called_at}` : null;
+    if (lastCalled && calledKey !== lastCalledKeyRef.current) {
+      lastCalledKeyRef.current = calledKey;
       const counterName = (lastCalled as any).counters?.name || "guichê";
       const customText = (lastCalled as any).custom_voice_text;
       console.log("[Panel] lastCalled ticket:", lastCalled.id, "custom_voice_text:", customText);
