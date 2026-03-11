@@ -247,6 +247,36 @@ export async function printViaAndroidUsbMethod(ticket: Ticket): Promise<boolean>
   }
 }
 
+// ============ METHOD 5: WebUSB Direct (no popup, silent) ============
+export async function printViaWebUsbMethod(ticket: Ticket): Promise<boolean> {
+  try {
+    const [printerConfig, layoutConfig] = await Promise.all([
+      getSystemConfig("printer"),
+      getSystemConfig("ticket_layout"),
+    ]);
+    const config = printerConfig as unknown as PrintConfig;
+    const layout = layoutConfig as unknown as TicketLayout;
+
+    const success = await printViaWebUsb(
+      {
+        displayNumber: ticket.display_number,
+        type: ticket.ticket_type,
+        patientName: ticket.patient_name,
+        patientCpf: ticket.patient_cpf,
+        createdAt: ticket.created_at,
+      },
+      layout,
+      config
+    );
+
+    await logPrint(ticket.id, success ? "success" : "failed", "webusb", success ? undefined : "WebUSB print failed");
+    return success;
+  } catch (err: any) {
+    await logPrint(ticket.id, "failed", "webusb", err.message);
+    return false;
+  }
+}
+
 // ============ MAIN PRINT FUNCTION WITH FALLBACK ============
 export async function printTicket(
   ticket: Ticket,
@@ -257,14 +287,15 @@ export async function printTicket(
     return { success: true, method: "disabled" };
   }
 
-  // On Android, prioritize USB printing
-  const defaultMethod = isAndroid() ? "android_usb" : "browser";
+  // Priority: Android USB > WebUSB > Print Server > Browser > Cloud
+  const defaultMethod = isAndroid() ? "android_usb" : hasWebUsb() ? "webusb" : "browser";
   const method = preferredMethod || defaultMethod;
 
   const methods: { name: PrintMethod; fn: () => Promise<boolean> }[] = [
     ...(isAndroid() ? [{ name: "android_usb" as PrintMethod, fn: () => printViaAndroidUsbMethod(ticket) }] : []),
-    { name: "browser", fn: () => printViaBrowser(ticket) },
+    ...(hasWebUsb() ? [{ name: "webusb" as PrintMethod, fn: () => printViaWebUsbMethod(ticket) }] : []),
     { name: "print_server", fn: () => printViaPrintServer(ticket) },
+    { name: "browser", fn: () => printViaBrowser(ticket) },
     { name: "cloud", fn: () => printViaCloud(ticket) },
   ];
 
@@ -286,7 +317,7 @@ export async function printTicket(
     }
   }
 
-  // All failed - save as pending for retry
+  // All failed
   await logPrint(ticket.id, "pending", "all_failed", "Todos os métodos falharam");
   return { success: false, method: "none" };
 }
