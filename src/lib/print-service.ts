@@ -289,12 +289,26 @@ export async function printTicket(
   ticket: Ticket,
   preferredMethod?: PrintMethod
 ): Promise<{ success: boolean; method: string }> {
+  // Check local device config first (totem-level config)
+  const localPrinter = getLocalPrinterConfig();
+  const hasLocalPrinter = isLocalPrinterPaired() && hasWebUsb();
+
+  // If local printer is paired, use it directly — no server config needed
+  if (hasLocalPrinter && !preferredMethod) {
+    try {
+      const success = await printViaWebUsbMethod(ticket);
+      if (success) return { success: true, method: "webusb" };
+    } catch {
+      // Fall through to other methods
+    }
+  }
+
+  // Fallback: check server printer config
   const config = (await getSystemConfig("printer")) as unknown as PrintConfig;
-  if (!config?.enabled) {
+  if (!config?.enabled && !hasLocalPrinter) {
     return { success: true, method: "disabled" };
   }
 
-  // Priority: Android USB > WebUSB > Print Server > Browser > Cloud
   const defaultMethod = isAndroid() ? "android_usb" : hasWebUsb() ? "webusb" : "browser";
   const method = preferredMethod || defaultMethod;
 
