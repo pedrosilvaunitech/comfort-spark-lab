@@ -33,7 +33,16 @@ export function useAuth() {
       try {
         const { data: { session }, error } = await supabase.auth.getSession();
         if (!mountedRef.current) return;
-        if (error) console.error("[Auth] getSession error:", error);
+        
+        if (error) {
+          const errorType = diagnoseAuthError(error, "getSession");
+          if (errorType === "auth") {
+            // Tokens were cleared, start fresh
+            setUser(null);
+            setRoles([]);
+            return;
+          }
+        }
 
         const currentUser = session?.user ?? null;
         setUser(currentUser);
@@ -44,8 +53,12 @@ export function useAuth() {
         } else {
           setRoles([]);
         }
-      } catch (err) {
-        console.error("[Auth] init error:", err);
+      } catch (err: any) {
+        const errorType = diagnoseAuthError(err, "initialize");
+        if (errorType === "auth") {
+          setUser(null);
+          setRoles([]);
+        }
       } finally {
         if (mountedRef.current) {
           setLoading(false);
