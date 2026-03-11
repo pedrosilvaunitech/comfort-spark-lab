@@ -32,7 +32,7 @@ export interface TicketLayout {
   lineSpacing: number;
 }
 
-export type PrintMethod = "browser" | "print_server" | "cloud" | "android_usb";
+export type PrintMethod = "browser" | "print_server" | "cloud" | "android_usb" | "webusb";
 
 // ============ METHOD 1: Browser Print (window.print) ============
 function buildTicketHtml(ticket: Ticket, layout: TicketLayout, config: PrintConfig): string {
