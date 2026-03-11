@@ -1,6 +1,7 @@
 import { useState, useEffect, useRef, useCallback } from "react";
 import { supabase } from "@/integrations/supabase/client";
 import type { User } from "@supabase/supabase-js";
+import { diagnoseAuthError, clearSupabaseAuthStorage } from "@/lib/auth-recovery";
 
 export function useAuth() {
   const [user, setUser] = useState<User | null>(null);
@@ -32,7 +33,16 @@ export function useAuth() {
       try {
         const { data: { session }, error } = await supabase.auth.getSession();
         if (!mountedRef.current) return;
-        if (error) console.error("[Auth] getSession error:", error);
+        
+        if (error) {
+          const errorType = diagnoseAuthError(error, "getSession");
+          if (errorType === "auth") {
+            // Tokens were cleared, start fresh
+            setUser(null);
+            setRoles([]);
+            return;
+          }
+        }
 
         const currentUser = session?.user ?? null;
         setUser(currentUser);
@@ -43,8 +53,12 @@ export function useAuth() {
         } else {
           setRoles([]);
         }
-      } catch (err) {
-        console.error("[Auth] init error:", err);
+      } catch (err: any) {
+        const errorType = diagnoseAuthError(err, "initialize");
+        if (errorType === "auth") {
+          setUser(null);
+          setRoles([]);
+        }
       } finally {
         if (mountedRef.current) {
           setLoading(false);
@@ -67,12 +81,25 @@ export function useAuth() {
     const { data: { subscription } } = supabase.auth.onAuthStateChange(async (_event, session) => {
       if (!initializedRef.current || !mountedRef.current) return;
 
+      // Handle token refresh errors
+      if (_event === 'TOKEN_REFRESHED' && !session) {
+        console.warn("[Auth] Token refresh failed, clearing stale tokens");
+        clearSupabaseAuthStorage();
+        setUser(null);
+        setRoles([]);
+        return;
+      }
+
       const currentUser = session?.user ?? null;
       setUser(currentUser);
 
       if (currentUser) {
-        const userRoles = await fetchRoles(currentUser.id);
-        if (mountedRef.current) setRoles(userRoles);
+        try {
+          const userRoles = await fetchRoles(currentUser.id);
+          if (mountedRef.current) setRoles(userRoles);
+        } catch (err) {
+          diagnoseAuthError(err, "onAuthStateChange.fetchRoles");
+        }
       } else {
         if (mountedRef.current) setRoles([]);
       }
