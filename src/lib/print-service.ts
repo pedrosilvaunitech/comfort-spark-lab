@@ -249,14 +249,20 @@ export async function printViaAndroidUsbMethod(ticket: Ticket): Promise<boolean>
 }
 
 // ============ METHOD 5: WebUSB Direct (no popup, silent) ============
+// Uses LOCAL device config (localStorage) — not server config
 export async function printViaWebUsbMethod(ticket: Ticket): Promise<boolean> {
   try {
-    const [printerConfig, layoutConfig] = await Promise.all([
-      getSystemConfig("printer"),
-      getSystemConfig("ticket_layout"),
-    ]);
-    const config = printerConfig as unknown as PrintConfig;
-    const layout = layoutConfig as unknown as TicketLayout;
+    const localConfig = getLocalPrinterConfig();
+    const layoutConfig = await getSystemConfig("ticket_layout");
+    const layout = (layoutConfig || {}) as unknown as TicketLayout;
+
+    // Merge local device printer settings
+    const mergedConfig = {
+      autoCut: localConfig.autoCut,
+      printName: localConfig.printName,
+      printCpf: localConfig.printCpf,
+      paperSize: localConfig.paperSize,
+    };
 
     const success = await printViaWebUsb(
       {
@@ -267,7 +273,7 @@ export async function printViaWebUsbMethod(ticket: Ticket): Promise<boolean> {
         createdAt: ticket.created_at,
       },
       layout,
-      config
+      mergedConfig
     );
 
     await logPrint(ticket.id, success ? "success" : "failed", "webusb", success ? undefined : "WebUSB print failed");
