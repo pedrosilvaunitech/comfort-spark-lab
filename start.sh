@@ -2,7 +2,7 @@
 
 # ============================================================
 # Start - Roda frontend e backend em segundo plano
-# Uso: bash start.sh [--port 3001]
+# Uso: bash start.sh [--port 3001] [--production]
 # Logs: logs/frontend.log | logs/docker.log
 # ============================================================
 
@@ -13,16 +13,20 @@ CYAN='\033[0;36m'
 NC='\033[0m'
 
 APP_PORT=3001
-PROJECT_NAME=$(basename "$(pwd)" | tr '[:upper:]' '[:lower:]' | sed 's/[^a-z0-9-]/-/g')
-PID_FILE=".frontend.pid"
+PROJECT_DIR="$(cd "$(dirname "$0")" && pwd)"
+PROJECT_NAME=$(basename "$PROJECT_DIR" | tr '[:upper:]' '[:lower:]' | sed 's/[^a-z0-9-]/-/g')
+PID_FILE="$PROJECT_DIR/.frontend.pid"
+PRODUCTION=false
 
 while [[ $# -gt 0 ]]; do
   case $1 in
     --port) APP_PORT="$2"; shift 2 ;;
+    --production) PRODUCTION=true; shift ;;
     *) shift ;;
   esac
 done
 
+cd "$PROJECT_DIR"
 mkdir -p logs
 
 echo -e "${CYAN}"
@@ -45,7 +49,7 @@ fi
 # ============================================================
 if [ -f "docker-compose.yml" ]; then
   echo -e "${YELLOW}[1/3] Subindo containers Docker...${NC}"
-  docker compose up -d > logs/docker.log 2>&1
+  docker compose up -d >> logs/docker.log 2>&1
   if [ $? -eq 0 ]; then
     echo -e "${GREEN}✓ Backend Docker rodando${NC}"
   else
@@ -69,7 +73,6 @@ if [ -f "$PID_FILE" ]; then
   rm -f "$PID_FILE"
 fi
 
-# Matar qualquer vite na mesma porta
 lsof -ti:${APP_PORT} 2>/dev/null | xargs kill -9 2>/dev/null || true
 
 # ============================================================
@@ -79,15 +82,23 @@ echo -e "${YELLOW}[3/3] Iniciando frontend na porta ${APP_PORT}...${NC}"
 
 if [ ! -d "node_modules" ]; then
   echo -e "${YELLOW}  Instalando dependências...${NC}"
-  npm install > logs/npm-install.log 2>&1
+  npm install >> logs/npm-install.log 2>&1
 fi
 
-# Rodar em background com nohup
-nohup npx vite --host 0.0.0.0 --port ${APP_PORT} > logs/frontend.log 2>&1 &
+if [ "$PRODUCTION" = true ]; then
+  # Build e servir produção
+  if [ ! -d "dist" ] || [ "$(find src -newer dist/index.html 2>/dev/null | head -1)" ]; then
+    echo -e "${YELLOW}  Compilando para produção...${NC}"
+    npx vite build >> logs/build.log 2>&1
+  fi
+  nohup npx vite preview --host 0.0.0.0 --port ${APP_PORT} >> logs/frontend.log 2>&1 &
+else
+  nohup npx vite --host 0.0.0.0 --port ${APP_PORT} >> logs/frontend.log 2>&1 &
+fi
+
 FRONTEND_PID=$!
 echo "$FRONTEND_PID" > "$PID_FILE"
 
-# Aguardar inicialização
 sleep 3
 if kill -0 "$FRONTEND_PID" 2>/dev/null; then
   echo -e "${GREEN}✓ Frontend rodando em background (PID: $FRONTEND_PID)${NC}"

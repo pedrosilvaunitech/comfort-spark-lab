@@ -1,19 +1,17 @@
 #!/bin/bash
 
-# ============================================================
-# Stop - Para frontend e backend
-# ============================================================
-
 RED='\033[0;31m'
 GREEN='\033[0;32m'
 YELLOW='\033[1;33m'
 NC='\033[0m'
 
-PID_FILE=".frontend.pid"
+PROJECT_DIR="$(cd "$(dirname "$0")" && pwd)"
+PID_FILE="$PROJECT_DIR/.frontend.pid"
+
+cd "$PROJECT_DIR"
 
 echo -e "${YELLOW}Parando sistema...${NC}"
 
-# Parar frontend
 if [ -f "$PID_FILE" ]; then
   PID=$(cat "$PID_FILE")
   if kill -0 "$PID" 2>/dev/null; then
@@ -29,7 +27,6 @@ else
   echo -e "${YELLOW}Nenhum PID encontrado${NC}"
 fi
 
-# Parar Docker
 if [ -f "docker-compose.yml" ]; then
   echo -e "${YELLOW}Parando containers Docker...${NC}"
   docker compose down 2>/dev/null
