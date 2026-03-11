@@ -278,7 +278,9 @@ export async function printViaWebUsbMethod(ticket: Ticket): Promise<boolean> {
         createdAt: ticket.created_at,
       },
       layout,
-      mergedConfig
+      mergedConfig,
+      localConfig.vendorId,
+      localConfig.productId
     );
 
     await logPrint(ticket.id, success ? "success" : "failed", "webusb", success ? undefined : "WebUSB print failed");

@@ -47,6 +47,19 @@ const Totem = () => {
       if (data) setTotemConfig(data as unknown as TotemConfig);
     });
 
+    // Auto-connect to WebUSB printer on totem load (silent, no popup)
+    const localConfig = getLocalPrinterConfig();
+    if (localConfig.paired) {
+      autoConnectWebUsbPrinter(localConfig.vendorId, localConfig.productId)
+        .then((connected) => {
+          if (connected) {
+            console.log("[Totem] WebUSB printer auto-connected via VID/PID");
+          } else {
+            console.warn("[Totem] WebUSB printer not found. Pair via setup.");
+          }
+        });
+    }
+
     const channel = supabase
       .channel("totem-service-types")
       .on("postgres_changes", { event: "*", schema: "public", table: "service_types" }, () => loadServiceTypes())
