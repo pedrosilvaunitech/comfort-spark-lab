@@ -1,4 +1,4 @@
-import { useState, useEffect, useCallback } from "react";
+import { useState, useEffect, useCallback, useRef } from "react";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent } from "@/components/ui/card";
 import { Input } from "@/components/ui/input";
@@ -10,6 +10,8 @@ import type { ServiceType, Ticket } from "@/lib/ticket-service";
 import { Printer, User, FileText, Heart, ArrowLeft } from "lucide-react";
 import { useScreenConfig } from "@/hooks/use-screen-config";
 import { useKioskMode } from "@/lib/kiosk-mode";
+import { useNavigate } from "react-router-dom";
+import { isLocalPrinterPaired } from "@/lib/local-printer-config";
 
 type Step = "select_type" | "optional_info" | "ticket_generated";
 
