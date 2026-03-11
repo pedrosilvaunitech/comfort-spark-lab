@@ -55,7 +55,7 @@ const Login = () => {
     return !!counter.operator_name && !!counter.current_ticket_id;
   };
 
-  // Create first admin user
+  // Create first admin user — works offline without Edge Functions
   const handleSetup = async (e: React.FormEvent) => {
     e.preventDefault();
     if (password.length < 6) {
@@ -64,14 +64,26 @@ const Login = () => {
     }
     setLoading(true);
     try {
-      const { data, error } = await supabase.functions.invoke("setup-admin", {
-        body: { email, password, full_name: fullName },
+      // 1. Create user via standard signUp (auto-confirm enabled)
+      const { data: signUpData, error: signUpError } = await supabase.auth.signUp({
+        email,
+        password,
+        options: { data: { full_name: fullName } },
       });
-      if (error) throw error;
-      if (data?.error) throw new Error(data.error);
+      if (signUpError) throw signUpError;
+
+      const newUser = signUpData.user;
+      if (!newUser) throw new Error("Falha ao criar usuário");
+
+      // 2. Assign admin role via SECURITY DEFINER function (bypasses RLS)
+      const { error: rpcError } = await supabase.rpc("setup_first_admin", {
+        _user_id: newUser.id,
+      });
+      if (rpcError) throw rpcError;
+
       toast.success("Administrador criado! Fazendo login...");
-      
-      // Auto-login after creation
+
+      // 3. Auto-login
       const { error: loginError } = await supabase.auth.signInWithPassword({ email, password });
       if (loginError) {
         toast.success("Admin criado! Faça login.");
