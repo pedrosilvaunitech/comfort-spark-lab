@@ -11,7 +11,8 @@ import { Printer, User, FileText, Heart, ArrowLeft } from "lucide-react";
 import { useScreenConfig } from "@/hooks/use-screen-config";
 import { useKioskMode } from "@/lib/kiosk-mode";
 import { useNavigate } from "react-router-dom";
-import { isLocalPrinterPaired } from "@/lib/local-printer-config";
+import { isLocalPrinterPaired, getLocalPrinterConfig } from "@/lib/local-printer-config";
+import { autoConnectWebUsbPrinter } from "@/lib/native-print";
 
 type Step = "select_type" | "optional_info" | "ticket_generated";
 
@@ -45,6 +46,19 @@ const Totem = () => {
     getSystemConfig("totem_config").then((data) => {
       if (data) setTotemConfig(data as unknown as TotemConfig);
     });
+
+    // Auto-connect to WebUSB printer on totem load (silent, no popup)
+    const localConfig = getLocalPrinterConfig();
+    if (localConfig.paired) {
+      autoConnectWebUsbPrinter(localConfig.vendorId, localConfig.productId)
+        .then((connected) => {
+          if (connected) {
+            console.log("[Totem] WebUSB printer auto-connected via VID/PID");
+          } else {
+            console.warn("[Totem] WebUSB printer not found. Pair via setup.");
+          }
+        });
+    }
 
     const channel = supabase
       .channel("totem-service-types")

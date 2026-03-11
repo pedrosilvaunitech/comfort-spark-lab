@@ -188,9 +188,9 @@ function getNavigatorUsb(): any {
 }
 
 /**
- * Connect to USB printer via WebUSB API
+ * Connect to USB printer via WebUSB API using stored VID/PID
  */
-async function getWebUsbDevice(): Promise<any> {
+async function getWebUsbDevice(vendorId?: number, productId?: number): Promise<any> {
   const usb = getNavigatorUsb();
   if (!usb) return null;
 
@@ -200,24 +200,37 @@ async function getWebUsbDevice(): Promise<any> {
 
   try {
     const devices = await usb.getDevices();
-    if (devices.length > 0) {
-      cachedUsbDevice = devices[0];
-      if (!cachedUsbDevice.opened) {
-        await cachedUsbDevice.open();
-        await cachedUsbDevice.selectConfiguration(1);
-        await cachedUsbDevice.claimInterface(0);
+    
+    // If VID/PID provided, find matching device
+    let device = null;
+    if (vendorId && productId && devices.length > 0) {
+      device = devices.find(
+        (d: any) => d.vendorId === vendorId && d.productId === productId
+      ) || devices[0];
+    } else if (devices.length > 0) {
+      device = devices[0];
+    }
+
+    if (device) {
+      if (!device.opened) {
+        await device.open();
+        await device.selectConfiguration(1);
+        await device.claimInterface(0);
       }
-      return cachedUsbDevice;
+      cachedUsbDevice = device;
+      return device;
     }
     return null;
   } catch (err) {
     console.error('[WebUSB] Error connecting:', err);
+    cachedUsbDevice = null;
     return null;
   }
 }
 
 /**
  * Print raw ESC/POS data via WebUSB (no popups, silent after pairing)
+ * Uses VID/PID from local config to find the correct device
  */
 export async function printViaWebUsb(
   ticket: {
@@ -228,7 +241,9 @@ export async function printViaWebUsb(
     createdAt: string;
   },
   layout: any,
-  config: any
+  config: any,
+  vendorId?: number,
+  productId?: number
 ): Promise<boolean> {
   if (!hasWebUsb()) {
     console.warn('[WebUSB] WebUSB API not available');
@@ -236,7 +251,7 @@ export async function printViaWebUsb(
   }
 
   try {
-    const device = await getWebUsbDevice();
+    const device = await getWebUsbDevice(vendorId, productId);
     if (!device) {
       console.error('[WebUSB] No printer device available. Pair first via settings.');
       return false;
@@ -253,11 +268,10 @@ export async function printViaWebUsb(
     if (endpoint) {
       await device.transferOut(endpoint.endpointNumber, data);
     } else {
-      // Fallback: try endpoint 1 (common for POS printers)
       await device.transferOut(1, data);
     }
 
-    console.log('[WebUSB] Print sent successfully');
+    console.log('[WebUSB] Print sent successfully via', device.productName || `${device.vendorId}:${device.productId}`);
     return true;
   } catch (err) {
     console.error('[WebUSB] Print error:', err);
@@ -267,9 +281,23 @@ export async function printViaWebUsb(
 }
 
 /**
+ * Auto-connect to a previously paired WebUSB printer (call on page load)
+ * Returns true if a device is ready to print
+ */
+export async function autoConnectWebUsbPrinter(vendorId?: number, productId?: number): Promise<boolean> {
+  if (!hasWebUsb()) return false;
+  try {
+    const device = await getWebUsbDevice(vendorId, productId);
+    return !!device;
+  } catch {
+    return false;
+  }
+}
+
+/**
  * Pair the WebUSB printer (MUST be called from user gesture like button click)
  */
-export async function pairWebUsbPrinter(): Promise<{ success: boolean; deviceName?: string }> {
+export async function pairWebUsbPrinter(): Promise<{ success: boolean; deviceName?: string; vendorId?: number; productId?: number }> {
   const usb = getNavigatorUsb();
   if (!usb) return { success: false };
 
@@ -283,6 +311,8 @@ export async function pairWebUsbPrinter(): Promise<{ success: boolean; deviceNam
     return {
       success: true,
       deviceName: device.productName || `${device.vendorId}:${device.productId}`,
+      vendorId: device.vendorId,
+      productId: device.productId,
     };
   } catch (err) {
     console.error('[WebUSB] Pair error:', err);
