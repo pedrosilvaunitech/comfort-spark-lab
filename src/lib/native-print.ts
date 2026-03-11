@@ -297,7 +297,7 @@ export async function autoConnectWebUsbPrinter(vendorId?: number, productId?: nu
 /**
  * Pair the WebUSB printer (MUST be called from user gesture like button click)
  */
-export async function pairWebUsbPrinter(): Promise<{ success: boolean; deviceName?: string }> {
+export async function pairWebUsbPrinter(): Promise<{ success: boolean; deviceName?: string; vendorId?: number; productId?: number }> {
   const usb = getNavigatorUsb();
   if (!usb) return { success: false };
 
@@ -311,6 +311,8 @@ export async function pairWebUsbPrinter(): Promise<{ success: boolean; deviceNam
     return {
       success: true,
       deviceName: device.productName || `${device.vendorId}:${device.productId}`,
+      vendorId: device.vendorId,
+      productId: device.productId,
     };
   } catch (err) {
     console.error('[WebUSB] Pair error:', err);
