@@ -33,9 +33,9 @@ export default defineConfig(({ mode }) => ({
         ],
       },
       manifest: {
-        name: "UniTech - Sistema de Senhas",
-        short_name: "UniTech",
-        description: "Sistema de gerenciamento de filas e senhas",
+        name: "UniTechBR - Sistema de Senhas",
+        short_name: "UniTechBR",
+        description: "UniSistemas - Sistema de gerenciamento de filas e senhas",
         theme_color: "#1a73e8",
         background_color: "#f8fafc",
         display: "standalone",
