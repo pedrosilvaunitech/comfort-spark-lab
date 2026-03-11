@@ -14,6 +14,7 @@ import SetupAdmin from "./pages/SetupAdmin";
 import LicenseSettings from "./pages/LicenseSettings";
 import Financeiro from "./pages/Financeiro";
 import Install from "./pages/Install";
+import TotemSetup from "./pages/TotemSetup";
 import Suporte from "./pages/Suporte";
 import NotFound from "./pages/NotFound";
 
@@ -30,6 +31,7 @@ const App = () => (
             <Route path="/" element={<Index />} />
             <Route path="/login" element={<Login />} />
             <Route path="/totem" element={<Totem />} />
+            <Route path="/totem/setup" element={<TotemSetup />} />
             <Route path="/panel" element={<Panel />} />
             <Route path="/counter" element={<Counter />} />
             <Route path="/admin" element={<Admin />} />

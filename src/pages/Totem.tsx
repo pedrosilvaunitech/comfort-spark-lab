@@ -1,4 +1,4 @@
-import { useState, useEffect, useCallback } from "react";
+import { useState, useEffect, useCallback, useRef } from "react";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent } from "@/components/ui/card";
 import { Input } from "@/components/ui/input";
@@ -10,6 +10,8 @@ import type { ServiceType, Ticket } from "@/lib/ticket-service";
 import { Printer, User, FileText, Heart, ArrowLeft } from "lucide-react";
 import { useScreenConfig } from "@/hooks/use-screen-config";
 import { useKioskMode } from "@/lib/kiosk-mode";
+import { useNavigate } from "react-router-dom";
+import { isLocalPrinterPaired } from "@/lib/local-printer-config";
 
 type Step = "select_type" | "optional_info" | "ticket_generated";
 
@@ -21,6 +23,7 @@ interface TotemConfig {
 const defaultTotemConfig: TotemConfig = { askName: true, askCpf: true };
 
 const Totem = () => {
+  const navigate = useNavigate();
   useKioskMode();
   const [serviceTypes, setServiceTypes] = useState<ServiceType[]>([]);
   const [step, setStep] = useState<Step>("select_type");
@@ -119,18 +122,48 @@ const Totem = () => {
   const bgStyle = screenConfig.totemBgColor ? { backgroundColor: screenConfig.totemBgColor } : {};
   const textStyle = screenConfig.totemTextColor ? { color: screenConfig.totemTextColor } : {};
 
+  // Long-press on title to open setup (hidden from patients)
+  const longPressTimer = useRef<ReturnType<typeof setTimeout> | null>(null);
+  const handleTitleTouchStart = () => {
+    longPressTimer.current = setTimeout(() => {
+      navigate("/totem/setup");
+    }, 3000); // 3 seconds long press
+  };
+  const handleTitleTouchEnd = () => {
+    if (longPressTimer.current) {
+      clearTimeout(longPressTimer.current);
+      longPressTimer.current = null;
+    }
+  };
+
+  // Show printer warning if not paired
+  const printerPaired = isLocalPrinterPaired();
+
   return (
     <div className="min-h-screen bg-primary flex flex-col items-center justify-center p-6" style={bgStyle}>
       <div className="text-center mb-8">
         {screenConfig.logoUrl && (
           <img src={screenConfig.logoUrl} alt="Logo" className="h-20 mx-auto mb-4 object-contain" />
         )}
-        <h1 className="text-4xl font-bold text-primary-foreground mb-2" style={textStyle}>
+        <h1
+          className="text-4xl font-bold text-primary-foreground mb-2 select-none"
+          style={textStyle}
+          onTouchStart={handleTitleTouchStart}
+          onTouchEnd={handleTitleTouchEnd}
+          onMouseDown={handleTitleTouchStart}
+          onMouseUp={handleTitleTouchEnd}
+          onMouseLeave={handleTitleTouchEnd}
+        >
           {screenConfig.totemTitle || "Sistema de Senhas"}
         </h1>
         <p className="text-primary-foreground/80 text-lg" style={textStyle ? { ...textStyle, opacity: 0.8 } : {}}>
           {screenConfig.totemSubtitle || "Toque para retirar sua senha"}
         </p>
+        {!printerPaired && (
+          <p className="text-xs text-primary-foreground/60 mt-2 animate-pulse">
+            ⚠️ Impressora não configurada — segure o título por 3s para configurar
+          </p>
+        )}
       </div>
 
       {step === "select_type" && (

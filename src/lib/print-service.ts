@@ -1,6 +1,7 @@
 import { logPrint, getSystemConfig } from "./ticket-service";
 import type { Ticket } from "./ticket-service";
 import { isAndroid, printViaAndroidUsb, hasWebUsb, printViaWebUsb } from "./native-print";
+import { getLocalPrinterConfig, isLocalPrinterPaired } from "./local-printer-config";
 
 export interface PrintConfig {
   enabled: boolean;
@@ -248,14 +249,20 @@ export async function printViaAndroidUsbMethod(ticket: Ticket): Promise<boolean>
 }
 
 // ============ METHOD 5: WebUSB Direct (no popup, silent) ============
+// Uses LOCAL device config (localStorage) — not server config
 export async function printViaWebUsbMethod(ticket: Ticket): Promise<boolean> {
   try {
-    const [printerConfig, layoutConfig] = await Promise.all([
-      getSystemConfig("printer"),
-      getSystemConfig("ticket_layout"),
-    ]);
-    const config = printerConfig as unknown as PrintConfig;
-    const layout = layoutConfig as unknown as TicketLayout;
+    const localConfig = getLocalPrinterConfig();
+    const layoutConfig = await getSystemConfig("ticket_layout");
+    const layout = (layoutConfig || {}) as unknown as TicketLayout;
+
+    // Merge local device printer settings
+    const mergedConfig = {
+      autoCut: localConfig.autoCut,
+      printName: localConfig.printName,
+      printCpf: localConfig.printCpf,
+      paperSize: localConfig.paperSize,
+    };
 
     const success = await printViaWebUsb(
       {
@@ -266,7 +273,7 @@ export async function printViaWebUsbMethod(ticket: Ticket): Promise<boolean> {
         createdAt: ticket.created_at,
       },
       layout,
-      config
+      mergedConfig
     );
 
     await logPrint(ticket.id, success ? "success" : "failed", "webusb", success ? undefined : "WebUSB print failed");
@@ -282,12 +289,26 @@ export async function printTicket(
   ticket: Ticket,
   preferredMethod?: PrintMethod
 ): Promise<{ success: boolean; method: string }> {
+  // Check local device config first (totem-level config)
+  const localPrinter = getLocalPrinterConfig();
+  const hasLocalPrinter = isLocalPrinterPaired() && hasWebUsb();
+
+  // If local printer is paired, use it directly — no server config needed
+  if (hasLocalPrinter && !preferredMethod) {
+    try {
+      const success = await printViaWebUsbMethod(ticket);
+      if (success) return { success: true, method: "webusb" };
+    } catch {
+      // Fall through to other methods
+    }
+  }
+
+  // Fallback: check server printer config
   const config = (await getSystemConfig("printer")) as unknown as PrintConfig;
-  if (!config?.enabled) {
+  if (!config?.enabled && !hasLocalPrinter) {
     return { success: true, method: "disabled" };
   }
 
-  // Priority: Android USB > WebUSB > Print Server > Browser > Cloud
   const defaultMethod = isAndroid() ? "android_usb" : hasWebUsb() ? "webusb" : "browser";
   const method = preferredMethod || defaultMethod;
 
