@@ -8,7 +8,7 @@ export function useRealtimeTickets() {
   const [waitingTickets, setWaitingTickets] = useState<any[]>([]);
   const [counters, setCounters] = useState<any[]>([]);
   const [lastCalled, setLastCalled] = useState<any | null>(null);
-  const lastCalledIdRef = useRef<string | null>(null);
+  const lastCalledKeyRef = useRef<string | null>(null);
 
   const refresh = useCallback(async () => {
     const [calledResult, waitingResult, ctrsResult] = await Promise.allSettled([
