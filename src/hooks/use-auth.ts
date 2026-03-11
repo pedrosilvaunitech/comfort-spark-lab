@@ -81,12 +81,25 @@ export function useAuth() {
     const { data: { subscription } } = supabase.auth.onAuthStateChange(async (_event, session) => {
       if (!initializedRef.current || !mountedRef.current) return;
 
+      // Handle token refresh errors
+      if (_event === 'TOKEN_REFRESHED' && !session) {
+        console.warn("[Auth] Token refresh failed, clearing stale tokens");
+        clearSupabaseAuthStorage();
+        setUser(null);
+        setRoles([]);
+        return;
+      }
+
       const currentUser = session?.user ?? null;
       setUser(currentUser);
 
       if (currentUser) {
-        const userRoles = await fetchRoles(currentUser.id);
-        if (mountedRef.current) setRoles(userRoles);
+        try {
+          const userRoles = await fetchRoles(currentUser.id);
+          if (mountedRef.current) setRoles(userRoles);
+        } catch (err) {
+          diagnoseAuthError(err, "onAuthStateChange.fetchRoles");
+        }
       } else {
         if (mountedRef.current) setRoles([]);
       }
