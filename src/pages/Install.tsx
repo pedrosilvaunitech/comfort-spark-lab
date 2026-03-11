@@ -45,7 +45,7 @@ const Install = () => {
       <div className="min-h-screen bg-background flex items-center justify-center p-6">
         <Card className="w-full max-w-md text-center">
           <CardHeader>
-            <Check className="h-16 w-16 mx-auto text-green-500 mb-4" />
+            <Check className="h-16 w-16 mx-auto text-accent mb-4" />
             <CardTitle>App Instalado!</CardTitle>
             <CardDescription>O UniTech já está instalado no seu dispositivo.</CardDescription>
           </CardHeader>

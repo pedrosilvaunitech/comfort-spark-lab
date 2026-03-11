@@ -35,6 +35,7 @@ const App = () => (
             <Route path="/admin" element={<Admin />} />
             <Route path="/setup" element={<SetupAdmin />} />
             <Route path="/license-settings" element={<LicenseSettings />} />
+            <Route path="/install" element={<Install />} />
             <Route path="/financeiro" element={<Financeiro />} />
             <Route path="/suporte" element={<Suporte />} />
             <Route path="*" element={<NotFound />} />
