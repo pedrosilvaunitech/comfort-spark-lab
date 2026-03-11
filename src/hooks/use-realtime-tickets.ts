@@ -25,12 +25,13 @@ export function useRealtimeTickets() {
     setWaitingTickets(waiting);
     setCounters(ctrs);
 
-    // Detect new called/in_service ticket with full join data
+    // Detect new called/in_service ticket or recall (called_at changed)
     if (called.length > 0) {
       const newest = called[0];
-      if (newest.id !== lastCalledIdRef.current) {
-        lastCalledIdRef.current = newest.id;
-        setLastCalled(newest);
+      const key = `${newest.id}_${newest.called_at}`;
+      if (key !== lastCalledKeyRef.current) {
+        lastCalledKeyRef.current = key;
+        setLastCalled({ ...newest });
       }
     }
   }, []);
