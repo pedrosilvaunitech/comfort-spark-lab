@@ -102,7 +102,7 @@ async function speakTicket(displayNumber: string, counterName: string, settings:
 
 const Panel = () => {
   const { calledTickets, lastCalled } = useRealtimeTickets();
-  const lastCalledIdRef = useRef<string | null>(null);
+  const lastCalledKeyRef = useRef<string | null>(null);
   const [voicesLoaded, setVoicesLoaded] = useState(false);
   const voiceSettingsRef = useRef<VoiceSettings>(defaultVoiceSettings);
   const { config: screenConfig } = useScreenConfig();
