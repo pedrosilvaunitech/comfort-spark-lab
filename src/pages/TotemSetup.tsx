@@ -51,6 +51,8 @@ const TotemSetup = () => {
         const updated = saveLocalPrinterConfig({
           paired: true,
           deviceName: result.deviceName || "Impressora USB",
+          vendorId: result.vendorId || 0x0483,
+          productId: result.productId || 0x7540,
           pairedAt: new Date().toISOString(),
         });
         setConfig(updated);
