@@ -188,9 +188,9 @@ function getNavigatorUsb(): any {
 }
 
 /**
- * Connect to USB printer via WebUSB API
+ * Connect to USB printer via WebUSB API using stored VID/PID
  */
-async function getWebUsbDevice(): Promise<any> {
+async function getWebUsbDevice(vendorId?: number, productId?: number): Promise<any> {
   const usb = getNavigatorUsb();
   if (!usb) return null;
 
@@ -200,18 +200,30 @@ async function getWebUsbDevice(): Promise<any> {
 
   try {
     const devices = await usb.getDevices();
-    if (devices.length > 0) {
-      cachedUsbDevice = devices[0];
-      if (!cachedUsbDevice.opened) {
-        await cachedUsbDevice.open();
-        await cachedUsbDevice.selectConfiguration(1);
-        await cachedUsbDevice.claimInterface(0);
+    
+    // If VID/PID provided, find matching device
+    let device = null;
+    if (vendorId && productId && devices.length > 0) {
+      device = devices.find(
+        (d: any) => d.vendorId === vendorId && d.productId === productId
+      ) || devices[0];
+    } else if (devices.length > 0) {
+      device = devices[0];
+    }
+
+    if (device) {
+      if (!device.opened) {
+        await device.open();
+        await device.selectConfiguration(1);
+        await device.claimInterface(0);
       }
-      return cachedUsbDevice;
+      cachedUsbDevice = device;
+      return device;
     }
     return null;
   } catch (err) {
     console.error('[WebUSB] Error connecting:', err);
+    cachedUsbDevice = null;
     return null;
   }
 }
