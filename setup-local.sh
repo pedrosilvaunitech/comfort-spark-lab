@@ -63,19 +63,23 @@ while [[ $# -gt 0 ]]; do
   esac
 done
 
-# Auto-detectar IP externo se não fornecido
+# Auto-detectar IP da rede interna (LAN) se não fornecido
 if [ -z "$HOST_IP" ]; then
-  for svc in "https://ifconfig.me" "https://api.ipify.org" "https://icanhazip.com"; do
-    HOST_IP=$(curl -s --max-time 3 "$svc" 2>/dev/null | tr -d '[:space:]')
-    [[ "$HOST_IP" =~ ^[0-9]+\.[0-9]+\.[0-9]+\.[0-9]+$ ]] && break
-    HOST_IP=""
-  done
-  if [ -z "$HOST_IP" ]; then
+  # Método 1: ip route (mais confiável no Linux)
+  HOST_IP=$(ip route get 1.1.1.1 2>/dev/null | grep -oP 'src \K[\d.]+' | head -1)
+  # Método 2: hostname -I
+  if [ -z "$HOST_IP" ] || ! [[ "$HOST_IP" =~ ^[0-9]+\.[0-9]+\.[0-9]+\.[0-9]+$ ]]; then
     HOST_IP=$(hostname -I 2>/dev/null | awk '{print $1}')
   fi
-  if [ -z "$HOST_IP" ]; then
+  # Método 3: ifconfig (compatibilidade)
+  if [ -z "$HOST_IP" ] || ! [[ "$HOST_IP" =~ ^[0-9]+\.[0-9]+\.[0-9]+\.[0-9]+$ ]]; then
+    HOST_IP=$(ifconfig 2>/dev/null | grep -Eo 'inet (addr:)?([0-9]*\.){3}[0-9]*' | grep -v '127.0.0.1' | head -1 | awk '{print $NF}')
+  fi
+  # Fallback
+  if [ -z "$HOST_IP" ] || ! [[ "$HOST_IP" =~ ^[0-9]+\.[0-9]+\.[0-9]+\.[0-9]+$ ]]; then
     HOST_IP="127.0.0.1"
   fi
+  echo -e "${GREEN}✓ IP da rede interna detectado: ${HOST_IP}${NC}"
 fi
 
 # Gerar senha se não fornecida
