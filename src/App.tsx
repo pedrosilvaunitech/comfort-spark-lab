@@ -14,6 +14,7 @@ import SetupAdmin from "./pages/SetupAdmin";
 import LicenseSettings from "./pages/LicenseSettings";
 import Financeiro from "./pages/Financeiro";
 import Install from "./pages/Install";
+import TotemSetup from "./pages/TotemSetup";
 import Suporte from "./pages/Suporte";
 import NotFound from "./pages/NotFound";
 
