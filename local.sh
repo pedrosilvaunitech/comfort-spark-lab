@@ -18,6 +18,7 @@ REPO_URL=""
 APP_PORT=3001
 GATEWAY_PORT=54321
 PROJECT_DIR=""
+JWT_SECRET=""
 
 # Parse args
 while [[ $# -gt 0 ]]; do
