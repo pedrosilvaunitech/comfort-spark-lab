@@ -297,8 +297,9 @@ services:
       GOTRUE_API_PORT: 9999
       API_EXTERNAL_URL: http://${HOST_IP}:${API_PORT}
       GOTRUE_DB_DRIVER: postgres
-      GOTRUE_DB_DATABASE_URL: postgres://supabase_auth_admin:${POSTGRES_PASSWORD}@db:5432/postgres
+      GOTRUE_DB_DATABASE_URL: postgres://postgres:${POSTGRES_PASSWORD}@db:5432/postgres
       GOTRUE_SITE_URL: http://${HOST_IP}:${APP_PORT}
+      GOTRUE_URI_ALLOW_LIST: http://${HOST_IP}:${APP_PORT},http://127.0.0.1:${APP_PORT},http://localhost:${APP_PORT}
       GOTRUE_DISABLE_SIGNUP: "false"
       GOTRUE_JWT_ADMIN_ROLES: service_role
       GOTRUE_JWT_AUD: authenticated
@@ -317,7 +318,7 @@ services:
     depends_on:
       db: { condition: service_healthy }
     environment:
-      PGRST_DB_URI: postgres://authenticator:${POSTGRES_PASSWORD}@db:5432/postgres
+      PGRST_DB_URI: postgres://postgres:${POSTGRES_PASSWORD}@db:5432/postgres
       PGRST_DB_SCHEMAS: public,storage
       PGRST_DB_ANON_ROLE: anon
       PGRST_JWT_SECRET: ${JWT_SECRET}
