@@ -267,8 +267,10 @@ export async function getSystemConfig(key: string) {
 export async function updateSystemConfig(key: string, value: Record<string, unknown>) {
   const { error } = await supabase
     .from("system_config")
-    .update({ value: value as any })
-    .eq("key", key);
+    .upsert(
+      { key, value: value as any, updated_at: new Date().toISOString() },
+      { onConflict: "key" }
+    );
   if (error) throw error;
 }
 
