@@ -18,6 +18,7 @@ REPO_URL=""
 APP_PORT=3001
 GATEWAY_PORT=54321
 PROJECT_DIR=""
+JWT_SECRET=""
 
 # Parse args
 while [[ $# -gt 0 ]]; do
@@ -26,6 +27,7 @@ while [[ $# -gt 0 ]]; do
     --port) APP_PORT="$2"; shift 2 ;;
     --gateway) GATEWAY_PORT="$2"; shift 2 ;;
     --dir) PROJECT_DIR="$2"; shift 2 ;;
+    --jwt-secret) JWT_SECRET="$2"; shift 2 ;;
     *) shift ;;
   esac
 done
@@ -125,16 +127,51 @@ echo -e "${GREEN}✓ Dependências instaladas${NC}"
 # ============================================================
 echo -e "${YELLOW}[5/7] Configurando .env para ambiente local...${NC}"
 
-# Ler a anon key existente (se houver)
-EXISTING_KEY=""
-if [ -f ".env" ]; then
-  EXISTING_KEY=$(grep -E "^VITE_SUPABASE_PUBLISHABLE_KEY=" .env | cut -d'=' -f2- | sed 's/^"//; s/"$//')
+# Se não passou --jwt-secret, perguntar ou usar default
+if [ -z "$JWT_SECRET" ]; then
+  echo -e "${CYAN}  Informe o JWT_SECRET do seu PostgREST/GoTrue local${NC}"
+  echo -e "${CYAN}  (ou pressione Enter para usar o padrão: super-secret-jwt-token-with-at-least-32-characters):${NC}"
+  read -r INPUT_SECRET
+  if [ -n "$INPUT_SECRET" ]; then
+    JWT_SECRET="$INPUT_SECRET"
+  else
+    JWT_SECRET="super-secret-jwt-token-with-at-least-32-characters"
+  fi
 fi
 
-# Se não tiver key local, usar a do Cloud
-if [ -z "$EXISTING_KEY" ]; then
-  EXISTING_KEY="eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6InBianl1ZGh4bmh0eGlibGhrd2doIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NzIwOTQ2NjAsImV4cCI6MjA4NzY3MDY2MH0.x1EjCqhJGfKwNu21GtN0jwm-nfwBJWzMHdD8ycWBXEM"
-fi
+echo -e "${YELLOW}  Gerando anon key local com JWT_SECRET fornecido...${NC}"
+
+# Gerar anon key JWT usando Node.js (compatível com o JWT_SECRET local)
+ANON_KEY=$(node -e "
+const crypto = require('crypto');
+const header = Buffer.from(JSON.stringify({alg:'HS256',typ:'JWT'})).toString('base64url');
+const payload = Buffer.from(JSON.stringify({
+  iss:'supabase',
+  ref:'local',
+  role:'anon',
+  iat:Math.floor(Date.now()/1000),
+  exp:Math.floor(Date.now()/1000)+315360000
+})).toString('base64url');
+const sig = crypto.createHmac('sha256','${JWT_SECRET}').update(header+'.'+payload).digest('base64url');
+console.log(header+'.'+payload+'.'+sig);
+")
+
+# Gerar service_role key também (necessário para edge functions)
+SERVICE_KEY=$(node -e "
+const crypto = require('crypto');
+const header = Buffer.from(JSON.stringify({alg:'HS256',typ:'JWT'})).toString('base64url');
+const payload = Buffer.from(JSON.stringify({
+  iss:'supabase',
+  ref:'local',
+  role:'service_role',
+  iat:Math.floor(Date.now()/1000),
+  exp:Math.floor(Date.now()/1000)+315360000
+})).toString('base64url');
+const sig = crypto.createHmac('sha256','${JWT_SECRET}').update(header+'.'+payload).digest('base64url');
+console.log(header+'.'+payload+'.'+sig);
+")
+
+echo -e "${GREEN}✓ Anon key gerada com sucesso${NC}"
 
 # Backup do .env existente
 if [ -f ".env" ]; then
@@ -143,13 +180,22 @@ fi
 
 cat > .env << ENVEOF
 # Gerado por local.sh em $(date)
+# Modo: 100% LOCAL
 VITE_SUPABASE_URL=http://${HOST_IP}:${GATEWAY_PORT}
-VITE_SUPABASE_PUBLISHABLE_KEY=${EXISTING_KEY}
+VITE_SUPABASE_PUBLISHABLE_KEY=${ANON_KEY}
 VITE_SUPABASE_PROJECT_ID=local
 ENVEOF
 
-echo -e "${GREEN}✓ .env configurado:${NC}"
+echo -e "${GREEN}✓ .env configurado para modo LOCAL:${NC}"
 echo -e "  VITE_SUPABASE_URL=http://${HOST_IP}:${GATEWAY_PORT}"
+echo -e "  ANON_KEY=${ANON_KEY:0:40}..."
+echo ""
+echo -e "${CYAN}  ╔══════════════════════════════════════════════╗${NC}"
+echo -e "${CYAN}  ║  Salve estas chaves para seu GoTrue/PostgREST:${NC}"
+echo -e "${CYAN}  ║  JWT_SECRET=${JWT_SECRET}${NC}"
+echo -e "${CYAN}  ║  ANON_KEY=${ANON_KEY}${NC}"
+echo -e "${CYAN}  ║  SERVICE_ROLE_KEY=${SERVICE_KEY}${NC}"
+echo -e "${CYAN}  ╚══════════════════════════════════════════════╝${NC}"
 
 # ============================================================
 # 6. Build do frontend
