@@ -47,16 +47,12 @@ const Totem = () => {
       if (data) setTotemConfig(data as unknown as TotemConfig);
     });
 
-    // Auto-connect to WebUSB printer on totem load (silent, no popup)
     const localConfig = getLocalPrinterConfig();
     if (localConfig.paired) {
       autoConnectWebUsbPrinter(localConfig.vendorId, localConfig.productId)
         .then((connected) => {
-          if (connected) {
-            console.log("[Totem] WebUSB printer auto-connected via VID/PID");
-          } else {
-            console.warn("[Totem] WebUSB printer not found. Pair via setup.");
-          }
+          if (connected) console.log("[Totem] WebUSB printer auto-connected");
+          else console.warn("[Totem] WebUSB printer not found");
         });
     }
 
@@ -96,10 +92,8 @@ const Totem = () => {
     setLoading(true);
     try {
       const ticket = await generateTicket(
-        selectedType.id,
-        ticketType,
-        patientName || undefined,
-        patientCpf || undefined
+        selectedType.id, ticketType,
+        patientName || undefined, patientCpf || undefined
       );
       setGeneratedTicket(ticket);
       setStep("ticket_generated");
@@ -135,33 +129,34 @@ const Totem = () => {
 
   const bgStyle = screenConfig.totemBgColor ? { backgroundColor: screenConfig.totemBgColor } : {};
   const textStyle = screenConfig.totemTextColor ? { color: screenConfig.totemTextColor } : {};
+  const fontStyle = screenConfig.totemFontFamily ? { fontFamily: screenConfig.totemFontFamily } : {};
+  const buttonStyle: React.CSSProperties = {
+    ...(screenConfig.totemButtonBgColor ? { backgroundColor: screenConfig.totemButtonBgColor } : {}),
+    ...(screenConfig.totemButtonTextColor ? { color: screenConfig.totemButtonTextColor } : {}),
+    ...(screenConfig.totemButtonRadius ? { borderRadius: `${screenConfig.totemButtonRadius}px` } : {}),
+  };
+  const logoSize = screenConfig.totemLogoSize || "8";
 
-  // Long-press on title to open setup (hidden from patients)
+  // Long-press on title to open setup
   const longPressTimer = useRef<ReturnType<typeof setTimeout> | null>(null);
   const handleTitleTouchStart = () => {
-    longPressTimer.current = setTimeout(() => {
-      navigate("/totem/setup");
-    }, 3000); // 3 seconds long press
+    longPressTimer.current = setTimeout(() => navigate("/totem/setup"), 3000);
   };
   const handleTitleTouchEnd = () => {
-    if (longPressTimer.current) {
-      clearTimeout(longPressTimer.current);
-      longPressTimer.current = null;
-    }
+    if (longPressTimer.current) { clearTimeout(longPressTimer.current); longPressTimer.current = null; }
   };
 
-  // Show printer warning if not paired
   const printerPaired = isLocalPrinterPaired();
 
   return (
-    <div className="min-h-screen min-h-[100dvh] bg-primary flex flex-col items-center justify-center p-[3vw]" style={bgStyle}>
+    <div className="min-h-screen min-h-[100dvh] bg-primary flex flex-col items-center justify-center p-[3vw]" style={{ ...bgStyle, ...fontStyle }}>
       <div className="text-center mb-[3vh]">
-        {screenConfig.logoUrl && (
-          <img src={screenConfig.logoUrl} alt="Logo" className="h-[8vh] mx-auto mb-[2vh] object-contain" />
+        {screenConfig.totemShowLogo !== false && screenConfig.logoUrl && (
+          <img src={screenConfig.logoUrl} alt="Logo" className="mx-auto mb-[2vh] object-contain" style={{ height: `${logoSize}vh` }} />
         )}
         <h1
           className="text-[clamp(1.5rem,4vw,3.5rem)] font-bold text-primary-foreground mb-[0.5vh] select-none"
-          style={textStyle}
+          style={{ ...textStyle, ...fontStyle }}
           onTouchStart={handleTitleTouchStart}
           onTouchEnd={handleTitleTouchEnd}
           onMouseDown={handleTitleTouchStart}
@@ -170,7 +165,7 @@ const Totem = () => {
         >
           {screenConfig.totemTitle || "Sistema de Senhas"}
         </h1>
-        <p className="text-[clamp(0.9rem,2vw,1.5rem)] text-primary-foreground/80" style={textStyle ? { ...textStyle, opacity: 0.8 } : {}}>
+        <p className="text-[clamp(0.9rem,2vw,1.5rem)] text-primary-foreground/80" style={textStyle ? { ...textStyle, opacity: 0.8, ...fontStyle } : fontStyle}>
           {screenConfig.totemSubtitle || "Toque para retirar sua senha"}
         </p>
         {!printerPaired && (
@@ -184,14 +179,19 @@ const Totem = () => {
         <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-[2vw] w-full max-w-[90vw]">
           {serviceTypes.map((type) => (
             <button key={type.id} onClick={() => handleSelectType(type)} className="group">
-              <Card className="h-full transition-all duration-200 hover:scale-105 hover:shadow-xl cursor-pointer border-2 border-transparent hover:border-accent">
+              <Card
+                className="h-full transition-all duration-200 hover:scale-105 hover:shadow-xl cursor-pointer border-2 border-transparent hover:border-accent overflow-hidden"
+                style={buttonStyle}
+              >
                 <CardContent className="flex flex-col items-center justify-center p-[clamp(1.5rem,3vw,3rem)] gap-[1.5vh]">
-                  <div className="text-primary group-hover:text-accent transition-colors">
+                  <div className="transition-colors" style={screenConfig.totemButtonTextColor ? { color: screenConfig.totemButtonTextColor } : {}}>
                     {iconMap[type.prefix] || <FileText className="h-[clamp(2rem,4vw,4rem)] w-[clamp(2rem,4vw,4rem)]" />}
                   </div>
-                  <span className="text-[clamp(1rem,2.5vw,2rem)] font-bold text-card-foreground">{type.name}</span>
+                  <span className="text-[clamp(1rem,2.5vw,2rem)] font-bold" style={screenConfig.totemButtonTextColor ? { color: screenConfig.totemButtonTextColor } : {}}>
+                    {type.name}
+                  </span>
                   {type.description && (
-                    <span className="text-[clamp(0.7rem,1.2vw,1rem)] text-muted-foreground text-center">{type.description}</span>
+                    <span className="text-[clamp(0.7rem,1.2vw,1rem)] text-center opacity-70">{type.description}</span>
                   )}
                 </CardContent>
               </Card>
@@ -212,9 +212,7 @@ const Totem = () => {
             <div className="space-y-4">
               {totemConfig.askName && (
                 <div>
-                  <Label htmlFor="name" className="flex items-center gap-2">
-                    <User className="h-4 w-4" /> Nome (opcional)
-                  </Label>
+                  <Label htmlFor="name" className="flex items-center gap-2"><User className="h-4 w-4" /> Nome (opcional)</Label>
                   <Input id="name" value={patientName} onChange={(e) => setPatientName(e.target.value)} placeholder="Seu nome" className="mt-1 text-[clamp(0.9rem,1.5vw,1.1rem)]" />
                 </div>
               )}

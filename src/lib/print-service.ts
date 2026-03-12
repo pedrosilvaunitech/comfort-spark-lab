@@ -33,7 +33,7 @@ export interface TicketLayout {
   lineSpacing: number;
 }
 
-export type PrintMethod = "browser" | "print_server" | "cloud" | "android_usb" | "webusb";
+export type PrintMethod = "browser" | "print_server" | "cloud" | "android_usb" | "webusb" | "network_ip";
 
 // ============ METHOD 1: Browser Print (window.print) ============
 function buildTicketHtml(ticket: Ticket, layout: TicketLayout, config: PrintConfig): string {
@@ -254,14 +254,12 @@ export async function printViaAndroidUsbMethod(ticket: Ticket): Promise<boolean>
 }
 
 // ============ METHOD 5: WebUSB Direct (no popup, silent) ============
-// Uses LOCAL device config (localStorage) — not server config
 export async function printViaWebUsbMethod(ticket: Ticket): Promise<boolean> {
   try {
     const localConfig = getLocalPrinterConfig();
     const layoutConfig = await getSystemConfig("ticket_layout");
     const layout = (layoutConfig || {}) as unknown as TicketLayout;
 
-    // Merge local device printer settings
     const mergedConfig = {
       autoCut: localConfig.autoCut,
       printName: localConfig.printName,
@@ -291,6 +289,82 @@ export async function printViaWebUsbMethod(ticket: Ticket): Promise<boolean> {
   }
 }
 
+// ============ METHOD 6: Network IP Direct (via print server proxy) ============
+/**
+ * Sends ESC/POS commands to the printer's IP address via the local print server.
+ * The browser cannot open raw TCP sockets directly, so this uses a lightweight
+ * print server endpoint that forwards raw bytes to the printer IP:port.
+ * 
+ * Alternatively, if you have a print server running, it sends directly.
+ */
+export async function printViaNetworkIp(ticket: Ticket): Promise<boolean> {
+  try {
+    const [printerConfig, layoutConfig] = await Promise.all([
+      getSystemConfig("printer"),
+      getSystemConfig("ticket_layout"),
+    ]);
+    const config = printerConfig as unknown as PrintConfig;
+    const layout = layoutConfig as unknown as TicketLayout;
+
+    if (!config?.ip) {
+      await logPrint(ticket.id, "failed", "network_ip", "IP da impressora não configurado");
+      return false;
+    }
+
+    // Try to send via local print server (which handles raw TCP to the printer)
+    const payload = {
+      ticket: {
+        displayNumber: ticket.display_number,
+        type: ticket.ticket_type,
+        patientName: ticket.patient_name,
+        patientCpf: ticket.patient_cpf,
+        createdAt: ticket.created_at,
+      },
+      layout,
+      printer: {
+        connectionType: "network",
+        ip: config.ip,
+        port: config.port || 9100,
+        autoCut: config.autoCut,
+        paperSize: config.paperSize,
+        printName: config.printName,
+        printCpf: config.printCpf,
+      },
+    };
+
+    // Try multiple print server endpoints
+    const endpoints = [
+      `http://${config.ip}:${config.port || 9100}`, // Direct to printer (some printers accept HTTP)
+      `http://localhost:3001/print`, // Local print server
+      `http://${window.location.hostname}:3001/print`, // Same host print server
+    ];
+
+    for (const url of endpoints) {
+      try {
+        const response = await fetch(url, {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify(payload),
+          signal: AbortSignal.timeout(5000),
+        });
+        if (response.ok) {
+          await logPrint(ticket.id, "success", "network_ip");
+          return true;
+        }
+      } catch {
+        // Try next endpoint
+        continue;
+      }
+    }
+
+    await logPrint(ticket.id, "failed", "network_ip", `Não foi possível conectar à impressora ${config.ip}:${config.port}`);
+    return false;
+  } catch (err: any) {
+    await logPrint(ticket.id, "failed", "network_ip", err.message);
+    return false;
+  }
+}
+
 // ============ MAIN PRINT FUNCTION WITH FALLBACK ============
 export async function printTicket(
   ticket: Ticket,
@@ -304,8 +378,7 @@ export async function printTicket(
     try {
       const success = await printViaWebUsbMethod(ticket);
       if (success) return { success: true, method: "webusb" };
-      // WebUSB failed — log but do NOT open browser popup
-      console.warn("[Print] WebUSB falhou. Impressora pareada mas não respondeu. Verifique a conexão USB.");
+      console.warn("[Print] WebUSB falhou. Impressora pareada mas não respondeu.");
       await logPrint(ticket.id, "failed", "webusb", "Impressora pareada mas não respondeu");
       return { success: false, method: "webusb" };
     } catch (err: any) {
@@ -321,17 +394,18 @@ export async function printTicket(
     return { success: true, method: "disabled" };
   }
 
-  const defaultMethod = isAndroid() ? "android_usb" : hasWebUsb() ? "webusb" : "browser";
+  const defaultMethod = isAndroid() ? "android_usb" : hasWebUsb() ? "webusb" : 
+    (config?.connectionType === "network" ? "network_ip" : "browser");
   const method = preferredMethod || defaultMethod;
 
-  // Build fallback chain — exclude browser popup when WebUSB/Android is expected
+  // Build fallback chain
   const useSilentOnly = method === "webusb" || method === "android_usb";
 
   const methods: { name: PrintMethod; fn: () => Promise<boolean> }[] = [
     ...(isAndroid() ? [{ name: "android_usb" as PrintMethod, fn: () => printViaAndroidUsbMethod(ticket) }] : []),
     ...(hasWebUsb() ? [{ name: "webusb" as PrintMethod, fn: () => printViaWebUsbMethod(ticket) }] : []),
+    ...(config?.connectionType === "network" ? [{ name: "network_ip" as PrintMethod, fn: () => printViaNetworkIp(ticket) }] : []),
     { name: "print_server", fn: () => printViaPrintServer(ticket) },
-    // Only include browser popup if not using direct printing methods
     ...(!useSilentOnly ? [{ name: "browser" as PrintMethod, fn: () => printViaBrowser(ticket) }] : []),
     { name: "cloud", fn: () => printViaCloud(ticket) },
   ];
@@ -343,7 +417,7 @@ export async function printTicket(
     if (success) return { success: true, method: preferred.name };
   }
 
-  // Fallback: try others (no browser popup in silent mode)
+  // Fallback: try others
   for (const m of methods) {
     if (m.name === method) continue;
     try {
@@ -354,7 +428,6 @@ export async function printTicket(
     }
   }
 
-  // All failed
   await logPrint(ticket.id, "pending", "all_failed", "Todos os métodos falharam");
   return { success: false, method: "none" };
 }

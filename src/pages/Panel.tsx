@@ -63,11 +63,9 @@ async function speakTicket(displayNumber: string, counterName: string, settings:
   
   let text = settings.template;
   
-  // Support both old ("{senha}") and new ("{prefixo} {senha}") templates
   if (text.includes("{prefixo}")) {
     text = text.replace("{prefixo}", spokenPrefix).replace("{senha}", spokenNumber);
   } else {
-    // Old template without {prefixo}: combine prefix + number into {senha}
     const fullSpoken = spokenPrefix ? `${spokenPrefix} ${spokenNumber}` : spokenNumber;
     text = text.replace("{senha}", fullSpoken);
   }
@@ -129,9 +127,7 @@ const Panel = () => {
       lastCalledKeyRef.current = calledKey;
       const counterName = (lastCalled as any).counters?.name || "guichê";
       const customText = (lastCalled as any).custom_voice_text;
-      console.log("[Panel] lastCalled ticket:", lastCalled.id, "custom_voice_text:", customText);
       if (customText && customText.trim().length > 0) {
-        // Use custom voice text directly
         speechSynthesis.cancel();
         const settings = voiceSettingsRef.current;
         const doSpeak = async () => {
@@ -167,17 +163,22 @@ const Panel = () => {
   const bgStyle = screenConfig.panelBgColor ? { backgroundColor: screenConfig.panelBgColor } : {};
   const textStyle = screenConfig.panelTextColor ? { color: screenConfig.panelTextColor } : {};
   const ticketColorStyle = screenConfig.panelTicketColor ? { color: screenConfig.panelTicketColor } : {};
+  const fontStyle = screenConfig.panelFontFamily ? { fontFamily: screenConfig.panelFontFamily } : {};
+  const headerBgStyle = screenConfig.panelHeaderBgColor ? { backgroundColor: screenConfig.panelHeaderBgColor } : {};
+  const footerBgStyle = screenConfig.panelFooterBgColor ? { backgroundColor: screenConfig.panelFooterBgColor } : {};
+  const footerTextStyle = screenConfig.panelFooterTextColor ? { color: screenConfig.panelFooterTextColor } : {};
+  const logoSize = screenConfig.panelLogoSize || "5";
 
   return (
-    <div className="min-h-screen min-h-[100dvh] bg-primary flex flex-col" style={bgStyle}>
+    <div className="min-h-screen min-h-[100dvh] bg-primary flex flex-col" style={{ ...bgStyle, ...fontStyle }}>
       {/* Header with logo/title */}
       {(screenConfig.panelShowLogo && screenConfig.logoUrl) || screenConfig.panelTitle ? (
-        <div className="flex items-center justify-center gap-4 py-[1.5vh] px-[2vw]">
+        <div className="flex items-center justify-center gap-4 py-[1.5vh] px-[2vw]" style={headerBgStyle}>
           {screenConfig.panelShowLogo && screenConfig.logoUrl && (
-            <img src={screenConfig.logoUrl} alt="Logo" className="h-[5vh] object-contain" />
+            <img src={screenConfig.logoUrl} alt="Logo" className="object-contain" style={{ height: `${logoSize}vh` }} />
           )}
           {screenConfig.panelTitle && (
-            <h1 className="text-[2.5vw] font-bold text-primary-foreground" style={textStyle}>
+            <h1 className="text-[2.5vw] font-bold text-primary-foreground" style={{ ...textStyle, ...fontStyle }}>
               {screenConfig.panelTitle}
             </h1>
           )}
@@ -211,22 +212,22 @@ const Panel = () => {
         )}
       </div>
 
-      <div className="bg-primary/80 border-t-4 border-primary-foreground/20" style={bgStyle ? { backgroundColor: 'rgba(0,0,0,0.15)' } : {}}>
+      <div className="border-t-4 border-primary-foreground/20" style={{ ...footerBgStyle, ...(Object.keys(footerBgStyle).length === 0 ? { backgroundColor: 'rgba(0,0,0,0.15)' } : {}) }}>
         <div className="grid grid-cols-4 divide-x divide-primary-foreground/20">
           {recentCalled.length > 0
             ? recentCalled.map((t: any) => (
                 <div key={t.id} className="flex flex-col items-center justify-center py-[2vh] px-[1vw]">
-                  <span className="text-[clamp(2rem,5vw,6rem)] font-black text-primary-foreground tracking-wider" style={textStyle}>
+                  <span className="text-[clamp(2rem,5vw,6rem)] font-black text-primary-foreground tracking-wider" style={footerTextStyle.color ? footerTextStyle : textStyle}>
                     {t.display_number}
                   </span>
-                  <span className="text-[clamp(0.8rem,1.5vw,1.5rem)] font-semibold text-primary-foreground/70 mt-[0.5vh]" style={textStyle ? { ...textStyle, opacity: 0.7 } : {}}>
+                  <span className="text-[clamp(0.8rem,1.5vw,1.5rem)] font-semibold text-primary-foreground/70 mt-[0.5vh]" style={footerTextStyle.color ? { ...footerTextStyle, opacity: 0.7 } : textStyle ? { ...textStyle, opacity: 0.7 } : {}}>
                     {t.counters?.name || "Guichê"}
                   </span>
                 </div>
               ))
             : Array.from({ length: 4 }).map((_, i) => (
                 <div key={i} className="flex items-center justify-center py-[2vh] px-[1vw]">
-                  <span className="text-[clamp(1.5rem,3vw,3rem)] text-primary-foreground/30" style={textStyle ? { ...textStyle, opacity: 0.3 } : {}}>—</span>
+                  <span className="text-[clamp(1.5rem,3vw,3rem)] text-primary-foreground/30" style={footerTextStyle.color ? { ...footerTextStyle, opacity: 0.3 } : textStyle ? { ...textStyle, opacity: 0.3 } : {}}>—</span>
                 </div>
               ))}
         </div>
