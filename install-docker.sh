@@ -140,7 +140,7 @@ DO \$\$ BEGIN
     CREATE ROLE authenticator NOINHERIT LOGIN PASSWORD '${POSTGRES_PASSWORD}';
   END IF;
 END \$\$;
-ALTER ROLE authenticator PASSWORD '${POSTGRES_PASSWORD}';
+ALTER ROLE authenticator WITH LOGIN PASSWORD '${POSTGRES_PASSWORD}';
 
 DO \$\$ BEGIN
   EXECUTE 'GRANT anon TO authenticator';
@@ -154,7 +154,14 @@ DO \$\$ BEGIN
     CREATE ROLE supabase_auth_admin NOINHERIT CREATEROLE LOGIN PASSWORD '${POSTGRES_PASSWORD}';
   END IF;
 END \$\$;
-ALTER ROLE supabase_auth_admin PASSWORD '${POSTGRES_PASSWORD}';
+ALTER ROLE supabase_auth_admin WITH LOGIN PASSWORD '${POSTGRES_PASSWORD}';
+
+GRANT CONNECT, CREATE, TEMP ON DATABASE postgres TO supabase_auth_admin;
+GRANT CONNECT ON DATABASE postgres TO authenticator;
+
+CREATE SCHEMA IF NOT EXISTS auth;
+GRANT USAGE ON SCHEMA auth TO supabase_auth_admin;
+GRANT ALL ON SCHEMA auth TO supabase_auth_admin;
 
 GRANT ALL ON SCHEMA public TO supabase_auth_admin;
 CREATE EXTENSION IF NOT EXISTS "uuid-ossp" SCHEMA public;
@@ -290,8 +297,9 @@ services:
       GOTRUE_API_PORT: 9999
       API_EXTERNAL_URL: http://${HOST_IP}:${API_PORT}
       GOTRUE_DB_DRIVER: postgres
-      GOTRUE_DB_DATABASE_URL: postgres://supabase_auth_admin:${POSTGRES_PASSWORD}@db:5432/postgres
+      GOTRUE_DB_DATABASE_URL: postgres://postgres:${POSTGRES_PASSWORD}@db:5432/postgres
       GOTRUE_SITE_URL: http://${HOST_IP}:${APP_PORT}
+      GOTRUE_URI_ALLOW_LIST: http://${HOST_IP}:${APP_PORT},http://127.0.0.1:${APP_PORT},http://localhost:${APP_PORT}
       GOTRUE_DISABLE_SIGNUP: "false"
       GOTRUE_JWT_ADMIN_ROLES: service_role
       GOTRUE_JWT_AUD: authenticated
@@ -310,7 +318,7 @@ services:
     depends_on:
       db: { condition: service_healthy }
     environment:
-      PGRST_DB_URI: postgres://authenticator:${POSTGRES_PASSWORD}@db:5432/postgres
+      PGRST_DB_URI: postgres://postgres:${POSTGRES_PASSWORD}@db:5432/postgres
       PGRST_DB_SCHEMAS: public,storage
       PGRST_DB_ANON_ROLE: anon
       PGRST_JWT_SECRET: ${JWT_SECRET}
@@ -387,6 +395,11 @@ docker exec -i ${PROJECT_NAME}-db psql -U supabase_admin -h localhost -d postgre
 GRANT anon TO authenticator;
 GRANT authenticated TO authenticator;
 GRANT service_role TO authenticator;
+GRANT CONNECT, CREATE, TEMP ON DATABASE postgres TO supabase_auth_admin;
+GRANT CONNECT ON DATABASE postgres TO authenticator;
+CREATE SCHEMA IF NOT EXISTS auth;
+GRANT USAGE ON SCHEMA auth TO supabase_auth_admin;
+GRANT ALL ON SCHEMA auth TO supabase_auth_admin;
 GRANT USAGE ON SCHEMA public TO anon, authenticated, service_role;
 GRANT ALL ON ALL TABLES IN SCHEMA public TO anon, authenticated, service_role;
 GRANT ALL ON ALL SEQUENCES IN SCHEMA public TO anon, authenticated, service_role;
@@ -398,6 +411,29 @@ GRANT ALL ON ALL TABLES IN SCHEMA public TO supabase_auth_admin;
 GRANT ALL ON ALL SEQUENCES IN SCHEMA public TO supabase_auth_admin;
 GRANTS
 echo -e "${GREEN}✓ Roles aplicados${NC}"
+
+echo -e "${CYAN}  Reiniciando Auth/REST para garantir credenciais atualizadas...${NC}"
+docker compose restart auth rest >/dev/null 2>&1 || true
+sleep 3
+
+AUTH_STATE=$(docker inspect -f '{{.State.Status}}' ${PROJECT_NAME}-auth 2>/dev/null || echo "missing")
+REST_STATE=$(docker inspect -f '{{.State.Status}}' ${PROJECT_NAME}-rest 2>/dev/null || echo "missing")
+
+if [ "$AUTH_STATE" != "running" ]; then
+  echo -e "${RED}✗ Auth não ficou em execução (estado: $AUTH_STATE)${NC}"
+  echo -e "${YELLOW}Últimos logs do auth:${NC}"
+  docker compose logs --no-color auth | tail -n 120 || true
+  exit 1
+fi
+
+if [ "$REST_STATE" != "running" ]; then
+  echo -e "${RED}✗ REST não ficou em execução (estado: $REST_STATE)${NC}"
+  echo -e "${YELLOW}Últimos logs do rest:${NC}"
+  docker compose logs --no-color rest | tail -n 120 || true
+  exit 1
+fi
+
+echo -e "${GREEN}✓ Auth e REST saudáveis${NC}"
 
 # Aplicar migrations
 if [ -d "supabase/migrations" ] && [ "$(ls -A supabase/migrations 2>/dev/null)" ]; then
