@@ -32,10 +32,8 @@ const CounterPage = () => {
 
   const selectedCounter = counters.find((c: any) => c.id === selectedCounterId);
 
-  // Sync currentTicket from realtime counter data
   useEffect(() => {
     const counterTicket = selectedCounter?.tickets;
-    // tickets comes as array from the join, or as object
     const ticket = Array.isArray(counterTicket) ? counterTicket[0] : counterTicket;
     if (ticket) {
       setCurrentTicket(ticket);
@@ -53,7 +51,6 @@ const CounterPage = () => {
       supabase.from("counters").update({ operator_name: user.user_metadata?.full_name || user.email }).eq("id", selectedCounterId);
     }
 
-    // Release counter on page close/refresh
     const handleBeforeUnload = () => {
       if (selectedCounterId) {
         const url = `${import.meta.env.VITE_SUPABASE_URL}/rest/v1/counters?id=eq.${selectedCounterId}`;
@@ -72,13 +69,9 @@ const CounterPage = () => {
     };
 
     window.addEventListener("beforeunload", handleBeforeUnload);
-
-    // Release counter on unmount (navigation away)
     return () => {
       window.removeEventListener("beforeunload", handleBeforeUnload);
-      if (selectedCounterId) {
-        releaseCounter(selectedCounterId);
-      }
+      if (selectedCounterId) releaseCounter(selectedCounterId);
     };
   }, [selectedCounterId, user]);
 
@@ -88,9 +81,7 @@ const CounterPage = () => {
     try {
       const ticket = await callNextTicket(selectedCounterId);
       if (ticket) {
-        if (user) {
-          await supabase.from("tickets").update({ operator_id: user.id }).eq("id", ticket.id);
-        }
+        if (user) await supabase.from("tickets").update({ operator_id: user.id }).eq("id", ticket.id);
         setCurrentTicket(ticket);
         toast.success(`Senha ${ticket.display_number} chamada e atendimento iniciado!`);
       } else {
@@ -108,15 +99,11 @@ const CounterPage = () => {
     try {
       const { data: counter } = await supabase.from("counters").select("*").eq("id", selectedCounterId).single();
       if (!counter) throw new Error("Guichê não encontrado");
-
-      // Complete current ticket if any
       if (counter.current_ticket_id) {
         await supabase.from("tickets")
           .update({ status: "completed", completed_at: new Date().toISOString() })
           .eq("id", counter.current_ticket_id);
       }
-
-      // Call the specific ticket
       const { data: updatedTicket, error } = await supabase.from("tickets")
         .update({
           status: "in_service",
@@ -127,11 +114,8 @@ const CounterPage = () => {
         .eq("id", ticketId)
         .select()
         .single();
-
       if (error) throw error;
-
       await supabase.from("counters").update({ current_ticket_id: ticketId }).eq("id", selectedCounterId);
-
       setCurrentTicket(updatedTicket);
       toast.success(`Senha ${updatedTicket.display_number} chamada!`);
       refresh();
@@ -160,7 +144,6 @@ const CounterPage = () => {
   const handleRecall = async () => {
     if (!currentTicket || !selectedCounterId) return;
     try {
-      // Update called_at to trigger realtime announcement on the Panel
       await supabase.from("tickets").update({ called_at: new Date().toISOString() }).eq("id", currentTicket.id);
       toast.success(`Senha ${currentTicket.display_number} rechamada!`);
       refresh();
@@ -179,18 +162,29 @@ const CounterPage = () => {
   if (!user) return <Navigate to="/login" />;
   if (!isOperator) return <div className="min-h-screen flex items-center justify-center"><p className="text-destructive">Sem permissão</p></div>;
 
+  // Custom styles from config
+  const pageBgStyle = screenConfig.counterBgColor ? { backgroundColor: screenConfig.counterBgColor } : {};
+  const pageTextStyle = screenConfig.counterTextColor ? { color: screenConfig.counterTextColor } : {};
+  const headerBgStyle = screenConfig.counterHeaderBgColor ? { backgroundColor: screenConfig.counterHeaderBgColor } : {};
+  const headerTextStyle = screenConfig.counterHeaderTextColor ? { color: screenConfig.counterHeaderTextColor } : {};
+  const fontStyle = screenConfig.counterFontFamily ? { fontFamily: screenConfig.counterFontFamily } : {};
+  const btnStyle: React.CSSProperties = {
+    ...(screenConfig.counterButtonBgColor ? { backgroundColor: screenConfig.counterButtonBgColor } : {}),
+    ...(screenConfig.counterButtonTextColor ? { color: screenConfig.counterButtonTextColor } : {}),
+  };
+
   return (
-    <div className="min-h-screen bg-background">
-      <header className="bg-card border-b border-border p-4">
+    <div className="min-h-screen bg-background" style={{ ...pageBgStyle, ...fontStyle }}>
+      <header className="bg-card border-b border-border p-4" style={headerBgStyle}>
         <div className="container mx-auto flex items-center justify-between">
           <div className="flex items-center gap-3">
             {screenConfig.counterShowLogo && screenConfig.logoUrl && (
               <img src={screenConfig.logoUrl} alt="Logo" className="h-8 object-contain" />
             )}
-            <h1 className="text-xl font-bold text-card-foreground">{screenConfig.counterTitle || "Painel do Guichê"}</h1>
+            <h1 className="text-xl font-bold text-card-foreground" style={{ ...headerTextStyle, ...fontStyle }}>{screenConfig.counterTitle || "Painel do Guichê"}</h1>
           </div>
           <div className="flex gap-2 items-center">
-            <span className="text-sm text-muted-foreground">{user.user_metadata?.full_name || user.email}</span>
+            <span className="text-sm text-muted-foreground" style={pageTextStyle}>{user.user_metadata?.full_name || user.email}</span>
             <Link to="/panel"><Button variant="outline" size="sm">Painel</Button></Link>
             <Link to="/admin"><Button variant="outline" size="sm">Admin</Button></Link>
             <Button variant="ghost" size="sm" onClick={async () => { if (selectedCounterId) await releaseCounter(selectedCounterId); signOut(); }}><LogOut className="h-4 w-4" /></Button>
@@ -198,7 +192,7 @@ const CounterPage = () => {
         </div>
       </header>
 
-      <main className="container mx-auto p-6 space-y-6">
+      <main className="container mx-auto p-6 space-y-6" style={pageTextStyle}>
         <Card>
           <CardContent className="p-6">
             <Label className="text-sm font-medium mb-2 block">Selecione o Guichê</Label>
@@ -212,7 +206,6 @@ const CounterPage = () => {
         </Card>
 
         <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
-          {/* Senha Atual */}
           <Card>
             <CardHeader><CardTitle>Senha Atual</CardTitle></CardHeader>
             <CardContent className="space-y-4">
@@ -228,7 +221,7 @@ const CounterPage = () => {
                     {currentTicket.patient_name && <p className="mt-2 text-muted-foreground">{currentTicket.patient_name}</p>}
                   </div>
                   <div className="grid grid-cols-2 gap-2">
-                    <Button onClick={handleComplete}><CheckCircle className="h-4 w-4 mr-2" /> Finalizar</Button>
+                    <Button onClick={handleComplete} style={btnStyle}><CheckCircle className="h-4 w-4 mr-2" /> Finalizar</Button>
                     <Button onClick={handleNoShow} variant="destructive"><XCircle className="h-4 w-4 mr-2" /> Não Compareceu</Button>
                     <Button onClick={handleRecall} variant="secondary" className="col-span-2"><Volume2 className="h-4 w-4 mr-2" /> Rechamar</Button>
                     <Button onClick={handleReprint} variant="outline" className="col-span-2"><Printer className="h-4 w-4 mr-2" /> Reimprimir</Button>
@@ -237,13 +230,12 @@ const CounterPage = () => {
               ) : (
                 <div className="text-center py-8"><p className="text-muted-foreground mb-4">Nenhuma senha em atendimento</p></div>
               )}
-              <Button onClick={handleCallNext} disabled={loading || !selectedCounterId} size="lg" className="w-full">
+              <Button onClick={handleCallNext} disabled={loading || !selectedCounterId} size="lg" className="w-full" style={btnStyle}>
                 <SkipForward className="h-5 w-5 mr-2" />{loading ? "Chamando..." : "Chamar Próxima"}
               </Button>
             </CardContent>
           </Card>
 
-          {/* Fila de Espera */}
           <Card>
             <CardHeader><CardTitle>Fila de Espera ({waitingTickets.length})</CardTitle></CardHeader>
             <CardContent>
@@ -262,7 +254,6 @@ const CounterPage = () => {
             </CardContent>
           </Card>
 
-          {/* Senhas Chamadas / Em Atendimento */}
           <Card>
             <CardHeader><CardTitle>Chamadas Recentes ({calledTickets.length})</CardTitle></CardHeader>
             <CardContent>
