@@ -1,16 +1,20 @@
-# Compilando o APK Kiosk para o Totem
+# Compilando o APK Kiosk para o Totem (PT80KM)
+
+## Impressora Suportada
+
+- **PT80KM** — 80mm Thermal Kiosk Printer Panel Mount
+- VID: `0x0483` (1155) | PID: `0x7540` (30016)
+- Interface: USB (ESC/POS)
 
 ## Pré-requisitos
 
-1. **Node.js** 18+ instalado
+1. **Node.js** 18+
 2. **Android Studio** instalado e configurado
 3. **JDK 17** instalado
 
 ## Passo a Passo
 
 ### 1. Clone o projeto do GitHub
-
-Exporte o projeto para o GitHub pelo botão "Export to Github" no Lovable, depois:
 
 ```bash
 git clone <seu-repositorio>
@@ -36,17 +40,15 @@ npm run build
 npx cap sync
 ```
 
-### 5. Configure o Kiosk Mode no Android
-
-Abra o projeto Android no Android Studio:
+### 5. Abra no Android Studio
 
 ```bash
 npx cap open android
 ```
 
-#### 5.1 Edite `android/app/src/main/AndroidManifest.xml`
+### 6. Configure o AndroidManifest.xml
 
-Adicione ao `<activity>` principal:
+Edite `android/app/src/main/AndroidManifest.xml`:
 
 ```xml
 <activity
@@ -56,37 +58,57 @@ Adicione ao `<activity>` principal:
     android:immersive="true"
     android:keepScreenOn="true">
     
-    <!-- Para auto-iniciar como kiosk -->
     <intent-filter>
         <action android:name="android.intent.action.MAIN" />
         <category android:name="android.intent.category.LAUNCHER" />
         <category android:name="android.intent.category.HOME" />
         <category android:name="android.intent.category.DEFAULT" />
     </intent-filter>
+    
+    <!-- Auto-detect PT80KM printer -->
+    <intent-filter>
+        <action android:name="android.hardware.usb.action.USB_DEVICE_ATTACHED" />
+    </intent-filter>
+    <meta-data
+        android:name="android.hardware.usb.action.USB_DEVICE_ATTACHED"
+        android:resource="@xml/device_filter" />
 </activity>
 ```
 
-Adicione as permissões:
+Permissões:
 
 ```xml
 <uses-feature android:name="android.hardware.usb.host" />
 <uses-permission android:name="android.permission.USB_PERMISSION" />
 <uses-permission android:name="android.permission.WAKE_LOCK" />
 <uses-permission android:name="android.permission.RECEIVE_BOOT_COMPLETED" />
+<uses-permission android:name="android.permission.INTERNET" />
 ```
 
-#### 5.2 Crie o Plugin USB Printer
+### 7. Crie o filtro USB para a PT80KM
 
-Crie o arquivo `android/app/src/main/java/app/lovable/UsbPrinterPlugin.java`:
+Crie `android/app/src/main/res/xml/device_filter.xml`:
+
+```xml
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <!-- PT80KM Thermal Kiosk Printer -->
+    <usb-device vendor-id="1155" product-id="30016" />
+    <!-- Outros modelos POS compatíveis -->
+    <usb-device vendor-id="1155" />
+</resources>
+```
+
+### 8. Crie o Plugin USB Printer
+
+Crie `android/app/src/main/java/app/lovable/UsbPrinterPlugin.java`:
 
 ```java
 package app.lovable;
 
 import android.app.PendingIntent;
-import android.content.BroadcastReceiver;
 import android.content.Context;
 import android.content.Intent;
-import android.content.IntentFilter;
 import android.hardware.usb.*;
 import android.util.Base64;
 import android.util.Log;
@@ -112,6 +134,52 @@ public class UsbPrinterPlugin extends Plugin {
     @Override
     public void load() {
         usbManager = (UsbManager) getContext().getSystemService(Context.USB_SERVICE);
+        // Auto-detect PT80KM on load
+        autoConnectPT80KM();
+    }
+    
+    private void autoConnectPT80KM() {
+        HashMap<String, UsbDevice> deviceList = usbManager.getDeviceList();
+        for (UsbDevice device : deviceList.values()) {
+            // PT80KM: VID=0x0483 PID=0x7540
+            if (device.getVendorId() == 0x0483 && device.getProductId() == 0x7540) {
+                if (usbManager.hasPermission(device)) {
+                    connectToDevice(device);
+                } else {
+                    PendingIntent pi = PendingIntent.getBroadcast(
+                        getContext(), 0,
+                        new Intent(ACTION_USB_PERMISSION),
+                        PendingIntent.FLAG_IMMUTABLE
+                    );
+                    usbManager.requestPermission(device, pi);
+                }
+                break;
+            }
+        }
+    }
+    
+    private boolean connectToDevice(UsbDevice device) {
+        try {
+            connection = usbManager.openDevice(device);
+            UsbInterface intf = device.getInterface(0);
+            connection.claimInterface(intf, true);
+            
+            for (int i = 0; i < intf.getEndpointCount(); i++) {
+                UsbEndpoint ep = intf.getEndpoint(i);
+                if (ep.getType() == UsbConstants.USB_ENDPOINT_XFER_BULK && 
+                    ep.getDirection() == UsbConstants.USB_DIR_OUT) {
+                    endpoint = ep;
+                    break;
+                }
+            }
+            
+            connectedDevice = device;
+            Log.i(TAG, "Connected to " + device.getDeviceName());
+            return true;
+        } catch (Exception e) {
+            Log.e(TAG, "Connection error: " + e.getMessage());
+            return false;
+        }
     }
 
     @PluginMethod
@@ -138,8 +206,8 @@ public class UsbPrinterPlugin extends Plugin {
 
     @PluginMethod
     public void connect(PluginCall call) {
-        int vendorId = call.getInt("vendorId", 0);
-        int productId = call.getInt("productId", 0);
+        int vendorId = call.getInt("vendorId", 0x0483);
+        int productId = call.getInt("productId", 0x7540);
         
         HashMap<String, UsbDevice> deviceList = usbManager.getDeviceList();
         UsbDevice targetDevice = null;
@@ -152,7 +220,7 @@ public class UsbPrinterPlugin extends Plugin {
         }
         
         if (targetDevice == null) {
-            call.reject("Device not found");
+            call.reject("PT80KM not found. Check USB connection.");
             return;
         }
         
@@ -167,27 +235,13 @@ public class UsbPrinterPlugin extends Plugin {
             return;
         }
         
-        try {
-            connection = usbManager.openDevice(targetDevice);
-            UsbInterface intf = targetDevice.getInterface(0);
-            connection.claimInterface(intf, true);
-            
-            for (int i = 0; i < intf.getEndpointCount(); i++) {
-                UsbEndpoint ep = intf.getEndpoint(i);
-                if (ep.getType() == UsbConstants.USB_ENDPOINT_XFER_BULK && 
-                    ep.getDirection() == UsbConstants.USB_DIR_OUT) {
-                    endpoint = ep;
-                    break;
-                }
-            }
-            
-            connectedDevice = targetDevice;
-            
+        boolean ok = connectToDevice(targetDevice);
+        if (ok) {
             JSObject result = new JSObject();
             result.put("success", true);
             call.resolve(result);
-        } catch (Exception e) {
-            call.reject("Connection error: " + e.getMessage());
+        } else {
+            call.reject("Failed to connect to PT80KM");
         }
     }
 
@@ -206,17 +260,34 @@ public class UsbPrinterPlugin extends Plugin {
         String base64Data = call.getString("data", "");
         
         if (connection == null || endpoint == null) {
-            call.reject("Printer not connected");
-            return;
+            // Try auto-connect
+            autoConnectPT80KM();
+            if (connection == null || endpoint == null) {
+                call.reject("PT80KM not connected");
+                return;
+            }
         }
         
         try {
             byte[] data = Base64.decode(base64Data, Base64.DEFAULT);
-            int transferred = connection.bulkTransfer(endpoint, data, data.length, 5000);
+            
+            // Send in chunks for reliability (PT80KM max packet = 64 bytes)
+            int chunkSize = 64;
+            boolean success = true;
+            for (int offset = 0; offset < data.length; offset += chunkSize) {
+                int len = Math.min(chunkSize, data.length - offset);
+                byte[] chunk = new byte[len];
+                System.arraycopy(data, offset, chunk, 0, len);
+                int transferred = connection.bulkTransfer(endpoint, chunk, len, 5000);
+                if (transferred < 0) {
+                    success = false;
+                    break;
+                }
+            }
             
             JSObject result = new JSObject();
-            result.put("success", transferred >= 0);
-            result.put("message", transferred >= 0 ? "Printed successfully" : "Transfer failed");
+            result.put("success", success);
+            result.put("message", success ? "Printed successfully" : "Transfer failed");
             call.resolve(result);
         } catch (Exception e) {
             call.reject("Print error: " + e.getMessage());
@@ -225,12 +296,14 @@ public class UsbPrinterPlugin extends Plugin {
 }
 ```
 
-#### 5.3 Registre o Plugin
+### 9. Registre o Plugin
 
-No arquivo `android/app/src/main/java/.../MainActivity.java`, adicione:
+Em `android/app/src/main/java/.../MainActivity.java`:
 
 ```java
 import app.lovable.UsbPrinterPlugin;
+import android.view.View;
+import android.view.WindowManager;
 
 public class MainActivity extends BridgeActivity {
     @Override
@@ -248,57 +321,50 @@ public class MainActivity extends BridgeActivity {
             | View.SYSTEM_UI_FLAG_IMMERSIVE_STICKY
         );
         
-        // Keep screen always on
         getWindow().addFlags(WindowManager.LayoutParams.FLAG_KEEP_SCREEN_ON);
     }
 }
 ```
 
-### 6. Gere o APK
+### 10. Gere o APK
 
 No Android Studio:
-1. Vá em **Build > Build Bundle(s) / APK(s) > Build APK(s)**
-2. O APK será gerado em `android/app/build/outputs/apk/debug/`
 
-Para APK de produção:
+1. **Build > Build Bundle(s) / APK(s) > Build APK(s)** (debug)
+2. O APK fica em `android/app/build/outputs/apk/debug/`
+
+Para produção:
+
 1. **Build > Generate Signed Bundle / APK**
 2. Siga o wizard para criar/usar uma keystore
 
-### 7. Instale no Tablet/Totem
+### 11. Instale no Tablet/Totem
 
 ```bash
 adb install app-debug.apk
 ```
 
-Ou transfira o APK via USB/pendrive para o dispositivo Android.
+### 12. Configure como Kiosk
 
-### 8. Configure como App Padrão (Kiosk)
-
-No Android do totem:
-1. Vá em **Configurações > Apps > App Padrão > Tela Inicial**
+No Android:
+1. **Configurações > Apps > App Padrão > Tela Inicial**
 2. Selecione o app do totem
-3. O app será o launcher padrão (modo kiosk)
 
 ---
 
-## Fluxo de Impressão USB
+## Fluxo de Impressão
 
-O app detecta automaticamente impressoras USB conectadas ao Android.  
-Quando uma senha é gerada no totem:
+1. App detecta PT80KM automaticamente via USB
+2. Gera comandos ESC/POS com a senha (80mm)
+3. Envia via USB bulk transfer em chunks de 64 bytes
+4. Corte automático (GS V 66 03)
 
-1. Gera comandos ESC/POS com a senha
-2. Envia via USB direto para a impressora térmica
-3. Fallback para `window.print()` se não houver impressora USB
-
-## Atualizando o App
-
-Quando fizer alterações no Lovable:
+## Atualizando
 
 ```bash
 git pull
 npm install
 npm run build
 npx cap sync
+# Recompile o APK no Android Studio
 ```
-
-Depois recompile o APK no Android Studio.
