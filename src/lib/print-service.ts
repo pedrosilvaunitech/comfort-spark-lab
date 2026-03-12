@@ -371,7 +371,18 @@ export async function printTicket(
   preferredMethod?: PrintMethod
 ): Promise<{ success: boolean; method: string }> {
   // Check local device config first (totem-level config)
-  const hasLocalPrinter = isLocalPrinterPaired() && hasWebUsb();
+  const localPaired = isLocalPrinterPaired();
+  const webUsbAvailable = hasWebUsb();
+  const hasLocalPrinter = localPaired && webUsbAvailable;
+
+  console.log("[Print] Starting print:", {
+    ticketId: ticket.id,
+    displayNumber: ticket.display_number,
+    localPaired,
+    webUsbAvailable,
+    hasLocalPrinter,
+    preferredMethod,
+  });
 
   // If local printer is paired, use WebUSB directly — NEVER fall back to browser popup
   if (hasLocalPrinter && !preferredMethod) {
@@ -390,7 +401,10 @@ export async function printTicket(
 
   // Fallback: check server printer config
   const config = (await getSystemConfig("printer")) as unknown as PrintConfig;
+  console.log("[Print] Server printer config:", { enabled: config?.enabled, connectionType: config?.connectionType });
+  
   if (!config?.enabled && !hasLocalPrinter) {
+    console.log("[Print] Printing disabled (config.enabled=false, no local printer)");
     return { success: true, method: "disabled" };
   }
 
