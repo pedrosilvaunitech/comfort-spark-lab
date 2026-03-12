@@ -135,26 +135,33 @@ mkdir -p docker
 
 # -- init-db.sql --
 cat > docker/init-db.sql << SQLEOF
-DO \$\$ BEGIN
+DO $$ BEGIN
   IF NOT EXISTS (SELECT FROM pg_roles WHERE rolname = 'authenticator') THEN
     CREATE ROLE authenticator NOINHERIT LOGIN PASSWORD '${POSTGRES_PASSWORD}';
   END IF;
-END \$\$;
-ALTER ROLE authenticator PASSWORD '${POSTGRES_PASSWORD}';
+END $$;
+ALTER ROLE authenticator WITH LOGIN PASSWORD '${POSTGRES_PASSWORD}';
 
-DO \$\$ BEGIN
+DO $$ BEGIN
   EXECUTE 'GRANT anon TO authenticator';
   EXECUTE 'GRANT authenticated TO authenticator';
   EXECUTE 'GRANT service_role TO authenticator';
 EXCEPTION WHEN OTHERS THEN NULL;
-END \$\$;
+END $$;
 
-DO \$\$ BEGIN
+DO $$ BEGIN
   IF NOT EXISTS (SELECT FROM pg_roles WHERE rolname = 'supabase_auth_admin') THEN
     CREATE ROLE supabase_auth_admin NOINHERIT CREATEROLE LOGIN PASSWORD '${POSTGRES_PASSWORD}';
   END IF;
-END \$\$;
-ALTER ROLE supabase_auth_admin PASSWORD '${POSTGRES_PASSWORD}';
+END $$;
+ALTER ROLE supabase_auth_admin WITH LOGIN PASSWORD '${POSTGRES_PASSWORD}';
+
+GRANT CONNECT, CREATE, TEMP ON DATABASE postgres TO supabase_auth_admin;
+GRANT CONNECT ON DATABASE postgres TO authenticator;
+
+CREATE SCHEMA IF NOT EXISTS auth;
+GRANT USAGE ON SCHEMA auth TO supabase_auth_admin;
+GRANT ALL ON SCHEMA auth TO supabase_auth_admin;
 
 GRANT ALL ON SCHEMA public TO supabase_auth_admin;
 CREATE EXTENSION IF NOT EXISTS "uuid-ossp" SCHEMA public;
