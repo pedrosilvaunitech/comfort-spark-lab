@@ -1,0 +1,51 @@
+{
+  "name": "sistema-de-senhas",
+  "version": "1.0.0",
+  "description": "Sistema de Senhas — Aplicação Desktop",
+  "main": "main.cjs",
+  "scripts": {
+    "start": "electron .",
+    "build": "electron-builder --win portable",
+    "build-installer": "electron-builder --win nsis"
+  },
+  "build": {
+    "appId": "app.lovable.comfortsparklab",
+    "productName": "Sistema de Senhas",
+    "directories": {
+      "output": "../electron-dist"
+    },
+    "files": [
+      "main.cjs",
+      "dist/**/*",
+      "public/favicon.png",
+      "node_modules/**/*"
+    ],
+    "extraResources": [],
+    "win": {
+      "target": [
+        {
+          "target": "portable",
+          "arch": ["x64"]
+        }
+      ],
+      "icon": "../public/favicon.png"
+    },
+    "nsis": {
+      "oneClick": true,
+      "allowToChangeInstallationDirectory": false,
+      "installerIcon": "../public/favicon.png",
+      "uninstallerIcon": "../public/favicon.png",
+      "shortcutName": "Sistema de Senhas"
+    },
+    "portable": {
+      "artifactName": "SistemaDeSenhas-${version}.exe"
+    }
+  },
+  "dependencies": {
+    "express": "^4.21.0"
+  },
+  "devDependencies": {
+    "electron": "^33.0.0",
+    "electron-builder": "^25.1.8"
+  }
+}
