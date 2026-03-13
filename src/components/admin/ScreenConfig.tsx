@@ -135,7 +135,7 @@ export function ScreenConfigPanel() {
                 </div>
                 <div>
                   <Label className="text-xs">Fonte</Label>
-                  <Select value={config.totemFontFamily} onValueChange={(v) => update("totemFontFamily", v)}>
+                  <Select value={config.totemFontFamily || "default"} onValueChange={(v) => update("totemFontFamily", v === "default" ? "" : v)}>
                     <SelectTrigger className="h-8 text-sm"><SelectValue placeholder="Padrão" /></SelectTrigger>
                     <SelectContent>{FONT_OPTIONS.map(f => <SelectItem key={f.value} value={f.value}>{f.label}</SelectItem>)}</SelectContent>
                   </Select>
