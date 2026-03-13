@@ -1,4 +1,4 @@
-import { useState, useEffect } from "react";
+import { useState, useEffect, useRef } from "react";
 import { supabase } from "@/integrations/supabase/client";
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
@@ -6,10 +6,12 @@ import { Button } from "@/components/ui/button";
 import { Calendar } from "@/components/ui/calendar";
 import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
-import { RefreshCw, Users, Clock, CheckCircle, XCircle, TrendingUp, Timer, CalendarIcon, UserCheck } from "lucide-react";
+import { RefreshCw, Users, Clock, CheckCircle, XCircle, TrendingUp, Timer, CalendarIcon, UserCheck, FileDown, FileSpreadsheet } from "lucide-react";
 import { format, subDays, startOfMonth, startOfWeek, subMonths } from "date-fns";
 import { ptBR } from "date-fns/locale";
 import { cn } from "@/lib/utils";
+import { exportToExcel, exportToPDF } from "@/lib/report-export";
+import { toast } from "sonner";
 import {
   BarChart, Bar, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer,
   PieChart, Pie, Cell, Legend, LineChart, Line,
@@ -47,6 +49,7 @@ export function Reports() {
   const [dateTo, setDateTo] = useState<Date>(new Date());
   const [reportView, setReportView] = useState<ReportView>("overview");
   const [selectedOperator, setSelectedOperator] = useState<string>("all");
+  const allTicketsRef = useRef<any[]>([]);
 
   // Auto-load on mount + auto-refresh every 15s
   useEffect(() => {
@@ -148,6 +151,14 @@ export function Reports() {
       // Fetch profiles for operator names
       const { data: profiles } = await supabase.from("profiles").select("*");
       const profileMap = new Map((profiles || []).map((p) => [p.id, p]));
+
+      // Enrich tickets with operator name for exports
+      all.forEach((t: any) => {
+        if (t.operator_id && profileMap.has(t.operator_id)) {
+          t.operator_name = profileMap.get(t.operator_id)?.full_name || "Desconhecido";
+        }
+      });
+      allTicketsRef.current = all;
 
       // Group by operator with detailed metrics
       const opMap = new Map<string, {
@@ -335,7 +346,36 @@ export function Reports() {
           <RefreshCw className={`h-4 w-4 ${loading ? "animate-spin" : ""}`} />
         </Button>
 
-        <span className="text-sm text-muted-foreground ml-auto">{periodLabel}</span>
+        <div className="flex gap-1 ml-auto">
+          <Button
+            onClick={() => {
+              try {
+                exportToExcel({
+                  tickets: allTicketsRef.current, stats, operatorStats, serviceStats,
+                  hourlyStats, avgWaitTime, avgServiceTime, dateFrom, dateTo, periodLabel,
+                });
+                toast.success("Excel exportado!");
+              } catch { toast.error("Erro ao exportar Excel"); }
+            }}
+            variant="outline" size="sm" disabled={stats.total === 0}
+          >
+            <FileSpreadsheet className="h-4 w-4 mr-1" /> Excel
+          </Button>
+          <Button
+            onClick={() => {
+              try {
+                exportToPDF({
+                  tickets: allTicketsRef.current, stats, operatorStats, serviceStats,
+                  hourlyStats, avgWaitTime, avgServiceTime, dateFrom, dateTo, periodLabel,
+                });
+                toast.success("PDF exportado!");
+              } catch { toast.error("Erro ao exportar PDF"); }
+            }}
+            variant="outline" size="sm" disabled={stats.total === 0}
+          >
+            <FileDown className="h-4 w-4 mr-1" /> PDF
+          </Button>
+        </div>
       </div>
 
       {/* View Tabs */}
