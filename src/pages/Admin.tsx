@@ -28,6 +28,7 @@ import { QueueManagement } from "@/components/admin/QueueManagement";
 import { TotemConfig } from "@/components/admin/TotemConfig";
 import { ScreenConfigPanel } from "@/components/admin/ScreenConfig";
 import { PriorityConfig } from "@/components/admin/PriorityConfig";
+import { PermissionsConfig } from "@/components/admin/PermissionsConfig";
 import { LicenseIndicator } from "@/components/admin/LicenseIndicator";
 import { toast } from "sonner";
 import { Link, Navigate } from "react-router-dom";
@@ -35,12 +36,12 @@ import {
   Printer, Settings, FileText, History, RefreshCw, Save, TestTube,
   LayoutTemplate, Users, Monitor, BarChart3, LogOut, Trash2, Volume2,
   ListOrdered, Tablet, Palette, ShieldAlert, Menu, X, ChevronRight,
-  Home, ExternalLink,
+  Home, ExternalLink, ShieldCheck,
 } from "lucide-react";
 import { cn } from "@/lib/utils";
 
 type AdminSection =
-  | "queue" | "counters" | "services" | "priority" | "users"
+  | "queue" | "counters" | "services" | "priority" | "users" | "permissions"
   | "totem" | "screens" | "printer" | "voice"
   | "reports" | "logs";
 
@@ -57,6 +58,7 @@ const NAV_ITEMS: NavItem[] = [
   { id: "services", label: "Tipos de Serviço", icon: <FileText className="h-4 w-4" />, adminOnly: true },
   { id: "priority", label: "Prioridade", icon: <ShieldAlert className="h-4 w-4" />, adminOnly: true },
   { id: "users", label: "Usuários", icon: <Users className="h-4 w-4" />, adminOnly: true },
+  { id: "permissions", label: "Permissões", icon: <ShieldCheck className="h-4 w-4" />, adminOnly: true },
   { id: "totem", label: "Config. Totem", icon: <Tablet className="h-4 w-4" />, adminOnly: true },
   { id: "screens", label: "Aparência das Telas", icon: <Palette className="h-4 w-4" />, adminOnly: true },
   { id: "printer", label: "Impressão & Layout", icon: <Printer className="h-4 w-4" />, adminOnly: true },
@@ -304,6 +306,7 @@ const Admin = () => {
             {activeSection === "counters" && isAdmin && <CounterManagement />}
             {activeSection === "services" && isAdmin && <ServiceTypeManagement />}
             {activeSection === "users" && isAdmin && <UserManagement />}
+            {activeSection === "permissions" && isAdmin && <PermissionsConfig />}
             {activeSection === "totem" && isAdmin && <TotemConfig />}
             {activeSection === "screens" && isAdmin && <ScreenConfigPanel />}
             {activeSection === "voice" && isAdmin && <VoiceConfig />}
