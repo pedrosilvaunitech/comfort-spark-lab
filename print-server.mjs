@@ -32,6 +32,9 @@ const CMD = {
   PARTIAL_CUT: Buffer.from([GS, 0x56, 0x01]),
   FEED3: Buffer.from([ESC, 0x64, 0x03]),
   LINE: Buffer.from("--------------------------------\n"),
+  // 180° rotation (upside-down mode)
+  ROTATE_ON: Buffer.from([ESC, 0x7B, 0x01]),
+  ROTATE_OFF: Buffer.from([ESC, 0x7B, 0x00]),
 };
 
 function textToBuffer(text) {
