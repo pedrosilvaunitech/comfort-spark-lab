@@ -461,7 +461,7 @@ const TotemSetup = () => {
                 </Button>
               </div>
               <p className="text-xs text-muted-foreground">
-                Requer um print server rodando localmente (porta 3001) para enviar dados à impressora via TCP.
+                Requer um print server rodando localmente (porta 3002) para enviar dados à impressora via TCP.
               </p>
             </CardContent>
           </Card>
