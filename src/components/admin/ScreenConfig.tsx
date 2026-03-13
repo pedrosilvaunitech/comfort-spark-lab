@@ -6,7 +6,7 @@ import { Button } from "@/components/ui/button";
 import { Switch } from "@/components/ui/switch";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
-import { Save, Monitor, Tablet, LayoutDashboard, Settings2 } from "lucide-react";
+import { Save, Monitor, Tablet, LayoutDashboard, Settings2, RotateCcw } from "lucide-react";
 import { supabase } from "@/integrations/supabase/client";
 import { toast } from "sonner";
 import { type ScreenConfig, defaultScreenConfig, loadScreenConfig } from "@/lib/screen-config";
