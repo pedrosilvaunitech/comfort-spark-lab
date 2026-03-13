@@ -285,6 +285,6 @@ const server = http.createServer(async (req, res) => {
 
 server.listen(PORT, "0.0.0.0", () => {
   console.log(`🖨️  Print Server rodando em http://0.0.0.0:${PORT}`);
-  console.log(`   POST /print — Envia ESC/POS para impressora de rede`);
+  console.log(`   POST /print — Envia ESC/POS para impressora de rede ou USB local`);
   console.log(`   GET  /health — Health check`);
 });
