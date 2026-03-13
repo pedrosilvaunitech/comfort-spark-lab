@@ -204,6 +204,14 @@ export function ScreenConfigPanel() {
                 <Label className="text-xs">Mostrar logo no painel</Label>
                 <Switch checked={config.panelShowLogo} onCheckedChange={(v) => update("panelShowLogo", v)} />
               </div>
+              <Button variant="outline" size="sm" className="w-full mt-3" onClick={() => setConfig(prev => ({
+                ...prev,
+                panelBgColor: "", panelTextColor: "", panelTicketColor: "", panelShowLogo: false,
+                panelTitle: "", panelFontFamily: "", panelHeaderBgColor: "", panelFooterBgColor: "",
+                panelFooterTextColor: "", panelLogoSize: "5",
+              }))}>
+                <RotateCcw className="h-3 w-3 mr-1" /> Restaurar Padrão do Painel
+              </Button>
             </CardContent>
           </Card>
         </TabsContent>
