@@ -344,7 +344,7 @@ export async function pairWebUsbPrinter(): Promise<{ success: boolean; deviceNam
       throw new Error('Nenhuma impressora selecionada. Selecione o dispositivo na janela do navegador.');
     }
     if (err.name === 'SecurityError') {
-      throw new Error('WebUSB bloqueado. Abra o app diretamente (não em iframe) ou use HTTPS.');
+      throw new Error('WebUSB bloqueado pelo navegador. Verifique se o nginx inclui o header: Permissions-Policy: usb=(self)');
     }
     throw new Error(err.message || 'Erro ao parear impressora USB.');
   }
