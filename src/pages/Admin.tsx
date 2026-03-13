@@ -305,48 +305,50 @@ const Admin = () => {
             {activeSection === "voice" && isAdmin && <VoiceConfig />}
             {activeSection === "reports" && <Reports />}
 
-            {/* PRINTER CONFIG */}
+            {/* PRINTER & LAYOUT CONFIG (unified) */}
             {activeSection === "printer" && isAdmin && (
               <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
+                {/* Link to TotemSetup for device-level config */}
+                <Card className="lg:col-span-2 border-primary/20 bg-primary/5">
+                  <CardContent className="p-4 flex items-center justify-between">
+                    <div>
+                      <p className="font-semibold text-foreground">Configuração da Impressora (por dispositivo)</p>
+                      <p className="text-sm text-muted-foreground">A conexão USB ou Rede é configurada em cada dispositivo/totem individualmente.</p>
+                    </div>
+                    <Link to="/totem-setup">
+                      <Button variant="outline" className="gap-2">
+                        <ExternalLink className="h-4 w-4" />
+                        Abrir Config. do Totem
+                      </Button>
+                    </Link>
+                  </CardContent>
+                </Card>
+
+                {/* Global print options */}
                 <Card>
                   <CardHeader>
-                    <CardTitle className="flex items-center gap-2"><Printer className="h-5 w-5 text-primary" /> Configuração da Impressora</CardTitle>
-                    <CardDescription>Configure a conexão com a impressora térmica</CardDescription>
+                    <CardTitle className="flex items-center gap-2"><Settings className="h-5 w-5 text-primary" /> Opções Globais de Impressão</CardTitle>
+                    <CardDescription>Aplicadas a todos os dispositivos</CardDescription>
                   </CardHeader>
                   <CardContent className="space-y-4">
                     <div className="flex items-center justify-between"><Label>Ativar impressão automática</Label><Switch checked={printerConfig.enabled} onCheckedChange={(v) => setPrinterConfig({ ...printerConfig, enabled: v })} /></div>
-                    <div><Label>Tipo de Conexão</Label><Select value={printerConfig.connectionType} onValueChange={(v: any) => setPrinterConfig({ ...printerConfig, connectionType: v })}><SelectTrigger><SelectValue /></SelectTrigger><SelectContent><SelectItem value="network">Rede (IP)</SelectItem><SelectItem value="usb">USB</SelectItem><SelectItem value="serial">Serial</SelectItem></SelectContent></Select></div>
-                    {printerConfig.connectionType === "network" && (<div className="space-y-3"><div><Label>IP</Label><Input value={printerConfig.ip} onChange={(e) => setPrinterConfig({ ...printerConfig, ip: e.target.value })} /></div><div><Label>Porta</Label><Input type="number" value={printerConfig.port} onChange={(e) => setPrinterConfig({ ...printerConfig, port: Number(e.target.value) })} /></div></div>)}
-                    {printerConfig.connectionType === "usb" && (<div className="space-y-3"><div><Label>Vendor ID</Label><Input value={printerConfig.usbVendorId} onChange={(e) => setPrinterConfig({ ...printerConfig, usbVendorId: e.target.value })} /></div><div><Label>Product ID</Label><Input value={printerConfig.usbProductId} onChange={(e) => setPrinterConfig({ ...printerConfig, usbProductId: e.target.value })} /></div></div>)}
-                    {printerConfig.connectionType === "serial" && (<div className="space-y-3"><div><Label>Porta COM</Label><Input value={printerConfig.serialPort} onChange={(e) => setPrinterConfig({ ...printerConfig, serialPort: e.target.value })} /></div><div><Label>Baudrate</Label><Input type="number" value={printerConfig.serialBaudrate} onChange={(e) => setPrinterConfig({ ...printerConfig, serialBaudrate: Number(e.target.value) })} /></div></div>)}
                     <div><Label>Papel</Label><Select value={printerConfig.paperSize} onValueChange={(v: any) => setPrinterConfig({ ...printerConfig, paperSize: v })}><SelectTrigger><SelectValue /></SelectTrigger><SelectContent><SelectItem value="58mm">58mm</SelectItem><SelectItem value="80mm">80mm</SelectItem></SelectContent></Select></div>
-                    <div><Label>Modo</Label><Select value={printerConfig.printMode} onValueChange={(v: any) => setPrinterConfig({ ...printerConfig, printMode: v })}><SelectTrigger><SelectValue /></SelectTrigger><SelectContent><SelectItem value="fast">Rápido</SelectItem><SelectItem value="detailed">Detalhado</SelectItem></SelectContent></Select></div>
-                    <Button onClick={handleSavePrinter} disabled={saving} className="w-full"><Save className="h-4 w-4 mr-2" />{saving ? "Salvando..." : "Salvar"}</Button>
-                  </CardContent>
-                </Card>
-                <Card>
-                  <CardHeader><CardTitle>Opções de Impressão</CardTitle></CardHeader>
-                  <CardContent className="space-y-4">
                     {[{ label: "Corte automático", key: "autoCut" },{ label: "QR Code", key: "printQrCode" },{ label: "Logo", key: "printLogo" },{ label: "CPF", key: "printCpf" },{ label: "Nome", key: "printName" }].map(({ label, key }) => (<div key={key} className="flex items-center justify-between"><Label>{label}</Label><Switch checked={(printerConfig as any)[key]} onCheckedChange={(v) => setPrinterConfig({ ...printerConfig, [key]: v })} /></div>))}
+                    <Button onClick={handleSavePrinter} disabled={saving} className="w-full"><Save className="h-4 w-4 mr-2" />{saving ? "Salvando..." : "Salvar Opções"}</Button>
                     <div className="border-t border-border pt-4 space-y-2">
                       <p className="text-sm font-semibold text-muted-foreground">Testar Impressão</p>
                       <Button onClick={() => handleTestPrint("browser")} variant="outline" className="w-full"><TestTube className="h-4 w-4 mr-2" />Navegador</Button>
                       <Button onClick={() => handleTestPrint("print_server")} variant="outline" className="w-full"><TestTube className="h-4 w-4 mr-2" />Print Server</Button>
-                      <Button onClick={() => handleTestPrint("cloud")} variant="outline" className="w-full"><TestTube className="h-4 w-4 mr-2" />Cloud</Button>
                     </div>
                     {pendingPrints.length > 0 && (<div className="border-t border-border pt-4"><Button onClick={handleReprocessPending} variant="outline" className="w-full"><RefreshCw className="h-4 w-4 mr-2" />Reprocessar {pendingPrints.length} Pendente(s)</Button></div>)}
                   </CardContent>
                 </Card>
-              </div>
-            )}
 
-            {/* LAYOUT CONFIG */}
-            {activeSection === "layout" && isAdmin && (
-              <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
+                {/* Layout config */}
                 <Card>
                   <CardHeader>
-                    <CardTitle className="flex items-center gap-2"><LayoutTemplate className="h-5 w-5 text-primary" /> Personalizar Ticket</CardTitle>
-                    <CardDescription>Configure o layout do ticket impresso</CardDescription>
+                    <CardTitle className="flex items-center gap-2"><LayoutTemplate className="h-5 w-5 text-primary" /> Layout do Ticket</CardTitle>
+                    <CardDescription>Configure o que aparece no ticket impresso</CardDescription>
                   </CardHeader>
                   <CardContent className="space-y-4">
                     <div><Label>Nome da Clínica</Label><Input value={layoutConfig.clinicName} onChange={(e) => setLayoutConfig({ ...layoutConfig, clinicName: e.target.value })} /></div>
@@ -359,12 +361,8 @@ const Admin = () => {
                     <div><Label>Alinhamento</Label><Select value={layoutConfig.alignment} onValueChange={(v: any) => setLayoutConfig({ ...layoutConfig, alignment: v })}><SelectTrigger><SelectValue /></SelectTrigger><SelectContent><SelectItem value="center">Centro</SelectItem><SelectItem value="left">Esquerda</SelectItem></SelectContent></Select></div>
                     <div><Label>Espaçamento</Label><Input type="number" min="0.5" max="3" step="0.1" value={layoutConfig.lineSpacing} onChange={(e) => setLayoutConfig({ ...layoutConfig, lineSpacing: Number(e.target.value) })} /></div>
                     <Button onClick={handleSaveLayout} disabled={saving} className="w-full"><Save className="h-4 w-4 mr-2" />Salvar Layout</Button>
-                  </CardContent>
-                </Card>
-                <Card>
-                  <CardHeader><CardTitle>Pré-visualização</CardTitle><CardDescription>Assim ficará o ticket impresso</CardDescription></CardHeader>
-                  <CardContent>
-                    <div className="border-2 border-dashed border-border rounded-lg p-6 bg-card">
+                    <div className="border-2 border-dashed border-border rounded-lg p-4 mt-4">
+                      <p className="text-xs text-muted-foreground text-center mb-2">Pré-visualização</p>
                       <TicketPreview layout={layoutConfig} config={printerConfig} />
                     </div>
                   </CardContent>
