@@ -306,6 +306,7 @@ const Admin = () => {
             {activeSection === "counters" && isAdmin && <CounterManagement />}
             {activeSection === "services" && isAdmin && <ServiceTypeManagement />}
             {activeSection === "users" && isAdmin && <UserManagement />}
+            {activeSection === "permissions" && isAdmin && <PermissionsConfig />}
             {activeSection === "totem" && isAdmin && <TotemConfig />}
             {activeSection === "screens" && isAdmin && <ScreenConfigPanel />}
             {activeSection === "voice" && isAdmin && <VoiceConfig />}
