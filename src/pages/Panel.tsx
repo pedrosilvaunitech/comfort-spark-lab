@@ -105,21 +105,31 @@ const Panel = () => {
   const voiceSettingsRef = useRef<VoiceSettings>(defaultVoiceSettings);
   const { config: screenConfig } = useScreenConfig();
 
-  const unlockAudio = () => {
-    // Create and immediately close an AudioContext to unlock audio
-    try {
-      const ctx = new (window.AudioContext || (window as any).webkitAudioContext)();
-      const osc = ctx.createOscillator();
-      osc.connect(ctx.destination);
-      osc.start();
-      osc.stop(ctx.currentTime + 0.001);
-      // Also unlock speechSynthesis
-      const u = new SpeechSynthesisUtterance("");
-      u.volume = 0;
-      speechSynthesis.speak(u);
-    } catch {}
-    setAudioUnlocked(true);
-  };
+  // Auto-unlock audio on first user interaction
+  useEffect(() => {
+    const unlock = () => {
+      try {
+        const ctx = new (window.AudioContext || (window as any).webkitAudioContext)();
+        const osc = ctx.createOscillator();
+        osc.connect(ctx.destination);
+        osc.start();
+        osc.stop(ctx.currentTime + 0.001);
+        const u = new SpeechSynthesisUtterance("");
+        u.volume = 0;
+        speechSynthesis.speak(u);
+      } catch {}
+      window.removeEventListener("click", unlock);
+      window.removeEventListener("touchstart", unlock);
+    };
+    window.addEventListener("click", unlock);
+    window.addEventListener("touchstart", unlock);
+    // Also try immediately
+    unlock();
+    return () => {
+      window.removeEventListener("click", unlock);
+      window.removeEventListener("touchstart", unlock);
+    };
+  }, []);
 
   useEffect(() => {
     getSystemConfig("voice_settings").then((data) => {
