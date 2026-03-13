@@ -149,7 +149,7 @@ const Admin = () => {
 
       {/* Sidebar */}
       <aside className={cn(
-        "fixed lg:sticky top-0 left-0 z-50 h-screen flex flex-col transition-all duration-300 ease-in-out",
+        "fixed top-0 left-0 z-50 h-dvh flex flex-col transition-all duration-300 ease-in-out",
         "bg-sidebar text-sidebar-foreground border-r border-sidebar-border",
         sidebarOpen ? "w-64" : "w-16",
         mobileSidebarOpen ? "translate-x-0" : "-translate-x-full lg:translate-x-0"
@@ -254,7 +254,7 @@ const Admin = () => {
       </aside>
 
       {/* Main Content */}
-      <div className="flex-1 flex flex-col min-w-0">
+      <div className={cn("flex-1 flex flex-col min-w-0 transition-all duration-300", sidebarOpen ? "lg:ml-64" : "lg:ml-16")}>
         {/* Top Bar */}
         <header className="sticky top-0 z-30 h-14 bg-card border-b border-border flex items-center justify-between px-4 lg:px-6 shrink-0">
           <div className="flex items-center gap-3">
