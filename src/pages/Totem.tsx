@@ -182,15 +182,15 @@ const Totem = () => {
                 className="h-full transition-all duration-200 hover:scale-105 hover:shadow-xl cursor-pointer border-2 border-transparent hover:border-accent overflow-hidden"
                 style={buttonStyle}
               >
-                <CardContent className="flex flex-col items-center justify-center p-[clamp(1.5rem,3vw,3rem)] gap-[1.5vh]">
+                <CardContent className="flex flex-col items-center justify-center p-[clamp(1rem,2.5vw,2.5rem)] gap-[1vh]">
                   <div className="transition-colors" style={screenConfig.totemButtonTextColor ? { color: screenConfig.totemButtonTextColor } : {}}>
-                    {iconMap[type.prefix] || <FileText className="h-[clamp(2rem,4vw,4rem)] w-[clamp(2rem,4vw,4rem)]" />}
+                    {iconMap[type.prefix] || <FileText className="h-[clamp(1.5rem,3vw,3rem)] w-[clamp(1.5rem,3vw,3rem)]" />}
                   </div>
-                  <span className="text-[clamp(1rem,2.5vw,2rem)] font-bold" style={screenConfig.totemButtonTextColor ? { color: screenConfig.totemButtonTextColor } : {}}>
+                  <span className="text-[clamp(0.85rem,2vw,1.6rem)] font-bold leading-tight text-center break-words max-w-full" style={screenConfig.totemButtonTextColor ? { color: screenConfig.totemButtonTextColor } : {}}>
                     {type.name}
                   </span>
                   {type.description && (
-                    <span className="text-[clamp(0.7rem,1.2vw,1rem)] text-center opacity-70">{type.description}</span>
+                    <span className="text-[clamp(0.6rem,1vw,0.85rem)] text-center opacity-70 break-words max-w-full leading-snug">{type.description}</span>
                   )}
                 </CardContent>
               </Card>
