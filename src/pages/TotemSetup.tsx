@@ -163,8 +163,8 @@ const TotemSetup = () => {
         };
 
         const endpoints = [
-          `http://localhost:3001/print`,
-          `http://${window.location.hostname}:3001/print`,
+          `http://localhost:3002/print`,
+          `http://${window.location.hostname}:3002/print`,
         ];
 
         let printed = false;
