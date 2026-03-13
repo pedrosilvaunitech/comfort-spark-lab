@@ -102,7 +102,15 @@ function buildEscPos(ticket, layout = {}, printer = {}) {
 
   // Feed + Cut
   buffers.push(CMD.FEED3);
+
+  // Disable rotation before cut
+  if (printer.rotate180) {
+    buffers.push(CMD.ROTATE_OFF);
+  }
+
   if (printer.autoCut !== false) {
+    buffers.push(CMD.PARTIAL_CUT);
+  }
     buffers.push(CMD.PARTIAL_CUT);
   }
 
