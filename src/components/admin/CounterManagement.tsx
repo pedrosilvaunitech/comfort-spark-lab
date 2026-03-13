@@ -46,7 +46,14 @@ export function CounterManagement() {
 
   const handleDelete = async (id: string) => {
     if (!confirm("Remover guichê?")) return;
-    await supabase.from("counters").delete().eq("id", id);
+    // Clear current_ticket and unlink tickets referencing this counter first
+    await supabase.from("counters").update({ current_ticket_id: null }).eq("id", id);
+    await supabase.from("tickets").update({ counter_id: null }).eq("counter_id", id);
+    const { error } = await supabase.from("counters").delete().eq("id", id);
+    if (error) {
+      toast.error("Erro ao remover guichê: " + error.message);
+      return;
+    }
     loadCounters();
     toast.success("Guichê removido");
   };
