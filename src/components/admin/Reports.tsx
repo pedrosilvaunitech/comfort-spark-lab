@@ -48,10 +48,25 @@ export function Reports() {
   const [reportView, setReportView] = useState<ReportView>("overview");
   const [selectedOperator, setSelectedOperator] = useState<string>("all");
 
-  // Auto-load on mount
+  // Auto-load on mount + auto-refresh every 15s
   useEffect(() => {
     applyPreset("today");
+    const interval = setInterval(() => {
+      loadStatsForRange(dateFrom, dateTo);
+    }, 15000);
+    return () => clearInterval(interval);
   }, []);
+
+  // Realtime subscription for instant updates
+  useEffect(() => {
+    const channel = supabase
+      .channel('reports-realtime')
+      .on('postgres_changes', { event: '*', schema: 'public', table: 'tickets' }, () => {
+        loadStatsForRange(dateFrom, dateTo);
+      })
+      .subscribe();
+    return () => { supabase.removeChannel(channel); };
+  }, [dateFrom, dateTo]);
 
   const applyPreset = (p: DatePreset) => {
     setPreset(p);
