@@ -150,7 +150,7 @@ const Totem = () => {
     if (longPressTimer.current) { clearTimeout(longPressTimer.current); longPressTimer.current = null; }
   };
 
-  const printerPaired = isLocalPrinterPaired();
+  const printerPaired = isAndroid() || isLocalPrinterPaired();
 
   return (
     <div className="min-h-screen min-h-[100dvh] bg-primary flex flex-col items-center justify-center p-[3vw]" style={{ ...bgStyle, ...fontStyle }}>
