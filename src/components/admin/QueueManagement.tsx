@@ -12,6 +12,7 @@ import { RefreshCw, PhoneCall, Clock, CheckCircle, Activity } from "lucide-react
 import { toast } from "sonner";
 
 export function QueueManagement() {
+  const { user } = useAuth();
   const [waitingTickets, setWaitingTickets] = useState<any[]>([]);
   const [calledTickets, setCalledTickets] = useState<any[]>([]);
   const [inServiceTickets, setInServiceTickets] = useState<any[]>([]);
