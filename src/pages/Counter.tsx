@@ -79,9 +79,8 @@ const CounterPage = () => {
     if (!selectedCounterId) { toast.error("Selecione um guichê"); return; }
     setLoading(true);
     try {
-      const ticket = await callNextTicket(selectedCounterId);
+      const ticket = await callNextTicket(selectedCounterId, user?.id);
       if (ticket) {
-        if (user) await supabase.from("tickets").update({ operator_id: user.id }).eq("id", ticket.id);
         setCurrentTicket(ticket);
         toast.success(`Senha ${ticket.display_number} chamada e atendimento iniciado!`);
       } else {
