@@ -437,6 +437,23 @@ export async function printTicket(
   const hasWebUsbLocal = localPaired && webUsbAvailable;
   const hasLocalPrinter = hasWebUsbLocal || isAndroidPlatform;
 
+  console.log("[Print] Starting print:", { localPaired, webUsbAvailable, localPreferredMethod, hasLocalPrinter, preferredMethod });
+
+  // If local WebUSB printer is paired, use it directly — NEVER fall back to browser popup
+  if (hasWebUsbLocal && !preferredMethod) {
+    try {
+      const success = await printViaWebUsbMethod(ticket);
+      if (success) return { success: true, method: "webusb" };
+      console.warn("[Print] WebUSB falhou. Impressora pareada mas não respondeu.");
+      await logPrint(ticket.id, "failed", "webusb", "Impressora pareada mas não respondeu");
+      return { success: false, method: "webusb" };
+    } catch (err: any) {
+      console.error("[Print] WebUSB error:", err);
+      await logPrint(ticket.id, "failed", "webusb", err.message);
+      return { success: false, method: "webusb" };
+    }
+  }
+
   // Fallback: check server printer config
   const config = (await getSystemConfig("printer")) as unknown as PrintConfig;
   console.log("[Print] Server printer config:", { enabled: config?.enabled, connectionType: config?.connectionType });
