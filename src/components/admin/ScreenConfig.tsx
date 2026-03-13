@@ -253,6 +253,14 @@ export function ScreenConfigPanel() {
                   <Switch checked={config.counterShowLogo} onCheckedChange={(v) => update("counterShowLogo", v)} />
                 </div>
               </div>
+              <Button variant="outline" size="sm" className="w-full mt-3" onClick={() => setConfig(prev => ({
+                ...prev,
+                counterShowLogo: false, counterTitle: "Painel do Guichê",
+                counterBgColor: "", counterTextColor: "", counterHeaderBgColor: "", counterHeaderTextColor: "",
+                counterFontFamily: "", counterButtonBgColor: "", counterButtonTextColor: "",
+              }))}>
+                <RotateCcw className="h-3 w-3 mr-1" /> Restaurar Padrão do Guichê
+              </Button>
             </CardContent>
           </Card>
         </TabsContent>
