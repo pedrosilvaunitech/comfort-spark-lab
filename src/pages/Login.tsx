@@ -31,16 +31,20 @@ const Login = () => {
         // First try RPC
         const { data, error } = await supabase.rpc("admin_exists");
         if (!error && data !== null && data !== undefined) {
-          setHasAdmin(!!data);
+          const adminFound = !!data;
+          setHasAdmin(adminFound);
+          if (adminFound) setShowSetup(false);
         } else {
-          // Fallback: directly query user_roles table
+          // Fallback: directly query user_roles table (works when logged in)
           const { data: rolesData, error: rolesError } = await supabase
             .from("user_roles")
             .select("id")
             .eq("role", "admin")
             .limit(1);
           if (!rolesError) {
-            setHasAdmin((rolesData?.length ?? 0) > 0);
+            const adminFound = (rolesData?.length ?? 0) > 0;
+            setHasAdmin(adminFound);
+            if (adminFound) setShowSetup(false);
           }
         }
       } catch {
