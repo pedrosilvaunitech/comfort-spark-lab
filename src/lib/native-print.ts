@@ -201,7 +201,6 @@ async function getWebUsbDevice(vendorId?: number, productId?: number): Promise<a
   try {
     const devices = await usb.getDevices();
     
-    // If VID/PID provided, find matching device
     let device = null;
     if (vendorId && productId && devices.length > 0) {
       device = devices.find(
@@ -214,9 +213,15 @@ async function getWebUsbDevice(vendorId?: number, productId?: number): Promise<a
     if (device) {
       if (!device.opened) {
         await device.open();
-        await device.selectConfiguration(1);
-        await device.claimInterface(0);
       }
+      try {
+        if (!device.configuration || device.configuration.configurationValue !== 1) {
+          await device.selectConfiguration(1);
+        }
+      } catch { /* already selected */ }
+      try {
+        await device.claimInterface(0);
+      } catch { /* already claimed */ }
       cachedUsbDevice = device;
       return device;
     }
