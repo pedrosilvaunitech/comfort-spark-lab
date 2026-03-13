@@ -137,10 +137,14 @@ export async function printViaPrintServer(ticket: Ticket, serverUrl?: string): P
       getSystemConfig("printer"),
       getSystemConfig("ticket_layout"),
     ]);
-    const config = printerConfig as unknown as PrintConfig;
-    const layout = layoutConfig as unknown as TicketLayout;
+    const config = (printerConfig || {}) as unknown as PrintConfig;
+    const layout = (layoutConfig || {}) as unknown as TicketLayout;
+    const localConfig = getLocalPrinterConfig();
 
-    const url = serverUrl || `http://${window.location.hostname}:3002/print`;
+    const localIp = typeof window !== "undefined" ? localStorage.getItem("unitech_printer_ip") : null;
+    const localPortRaw = typeof window !== "undefined" ? localStorage.getItem("unitech_printer_port") : null;
+    const parsedLocalPort = localPortRaw ? parseInt(localPortRaw, 10) : NaN;
+    const resolvedPort = Number.isFinite(parsedLocalPort) ? parsedLocalPort : (config.port || 9100);
 
     const payload = {
       ticket: {
@@ -152,33 +156,50 @@ export async function printViaPrintServer(ticket: Ticket, serverUrl?: string): P
       },
       layout,
       printer: {
-        connectionType: config.connectionType,
-        ip: config.ip,
-        port: config.port,
-        usbVendorId: config.usbVendorId,
-        usbProductId: config.usbProductId,
+        connectionType: config.connectionType || "usb",
+        ip: localIp || config.ip || "",
+        port: resolvedPort,
+        usbVendorId: localConfig.vendorId || Number(config.usbVendorId) || 0,
+        usbProductId: localConfig.productId || Number(config.usbProductId) || 0,
         serialPort: config.serialPort,
         serialBaudrate: config.serialBaudrate,
-        autoCut: config.autoCut,
-        paperSize: config.paperSize,
-        printQrCode: config.printQrCode,
+        autoCut: localConfig.autoCut ?? config.autoCut ?? true,
+        paperSize: localConfig.paperSize ?? config.paperSize ?? "80mm",
+        printQrCode: config.printQrCode ?? false,
+        printName: localConfig.printName ?? config.printName ?? true,
+        printCpf: localConfig.printCpf ?? config.printCpf ?? false,
+        allowUsbFallback: true,
       },
     };
 
-    const response = await fetch(url, {
-      method: "POST",
-      headers: { "Content-Type": "application/json" },
-      body: JSON.stringify(payload),
-    });
+    const urls = serverUrl
+      ? [serverUrl]
+      : [`http://${window.location.hostname}:3002/print`, "http://localhost:3002/print"];
 
-    if (!response.ok) {
-      const errText = await response.text();
-      await logPrint(ticket.id, "failed", "print_server", errText);
-      return false;
+    let lastError = "Print server indisponível";
+
+    for (const url of urls) {
+      try {
+        const response = await fetch(url, {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify(payload),
+          signal: AbortSignal.timeout(5000),
+        });
+
+        if (response.ok) {
+          await logPrint(ticket.id, "success", "print_server");
+          return true;
+        }
+
+        lastError = await response.text();
+      } catch (err: any) {
+        lastError = err?.message || lastError;
+      }
     }
 
-    await logPrint(ticket.id, "success", "print_server");
-    return true;
+    await logPrint(ticket.id, "failed", "print_server", lastError);
+    return false;
   } catch (err: any) {
     await logPrint(ticket.id, "failed", "print_server", err.message);
     return false;

@@ -1,6 +1,6 @@
 /**
  * Print Server Local — Recebe requisições HTTP do frontend e envia
- * comandos ESC/POS para impressoras de rede via TCP (porta 9100).
+ * comandos ESC/POS para impressoras de rede (TCP 9100) ou USB local.
  *
  * Uso: node print-server.mjs
  * PM2:  pm2 start ecosystem.config.cjs
@@ -10,6 +10,8 @@
 
 import http from "node:http";
 import net from "node:net";
+import fs from "node:fs/promises";
+import { spawn } from "node:child_process";
 
 const PORT = process.env.PRINT_SERVER_PORT || 3002;
 
@@ -122,6 +124,72 @@ function sendToPrinter(ip, port, data) {
   });
 }
 
+async function sendToUsbDevice(data, explicitDevicePath) {
+  const candidates = [
+    explicitDevicePath,
+    process.env.PRINT_SERVER_USB_DEVICE,
+    "/dev/usb/lp0",
+    "/dev/usb/lp1",
+    "/dev/lp0",
+  ].filter(Boolean);
+
+  for (const devicePath of candidates) {
+    try {
+      await fs.access(devicePath);
+      await fs.writeFile(devicePath, data);
+      return { method: "usb_device", target: devicePath };
+    } catch {
+      // try next candidate
+    }
+  }
+
+  throw new Error("Nenhum device USB de impressora encontrado (/dev/usb/lp0, /dev/usb/lp1, /dev/lp0)");
+}
+
+function sendToCupsRaw(data, printerName) {
+  return new Promise((resolve, reject) => {
+    const args = [];
+    if (printerName) {
+      args.push("-d", printerName);
+    }
+    args.push("-o", "raw", "-");
+
+    const lp = spawn("lp", args, { stdio: ["pipe", "pipe", "pipe"] });
+    let stderr = "";
+
+    lp.stderr.on("data", (chunk) => {
+      stderr += chunk.toString();
+    });
+
+    lp.on("error", (err) => {
+      reject(new Error(`Falha ao executar lp: ${err.message}`));
+    });
+
+    lp.on("close", (code) => {
+      if (code === 0) {
+        resolve({ method: "cups", target: printerName || "default" });
+      } else {
+        reject(new Error(stderr || `lp finalizou com código ${code}`));
+      }
+    });
+
+    lp.stdin.write(data);
+    lp.stdin.end();
+  });
+}
+
+async function sendToLocalUsbPrinter(data, printer = {}) {
+  try {
+    return await sendToUsbDevice(data, printer.devicePath);
+  } catch (usbErr) {
+    try {
+      return await sendToCupsRaw(data, printer.printerName);
+    } catch (cupsErr) {
+      throw new Error(`USB direto falhou (${usbErr.message}) e CUPS falhou (${cupsErr.message})`);
+    }
+  }
+}
+
 // ── CORS headers ─────────────────────────────────────────────────
 function corsHeaders() {
   return {
@@ -161,25 +229,47 @@ const server = http.createServer(async (req, res) => {
           return;
         }
 
-        const ip = printer?.ip;
-        const port = printer?.port || 9100;
+        const escPosData = buildEscPos(ticket, layout || {}, printer || {});
+        const connectionType = printer?.connectionType || (printer?.ip ? "network" : "usb");
 
-        if (!ip) {
-          res.writeHead(400, { ...corsHeaders(), "Content-Type": "application/json" });
-          res.end(JSON.stringify({ error: "printer.ip obrigatório" }));
-          return;
+        if (connectionType === "network") {
+          const ip = printer?.ip;
+          const port = printer?.port || 9100;
+
+          if (!ip) {
+            res.writeHead(400, { ...corsHeaders(), "Content-Type": "application/json" });
+            res.end(JSON.stringify({ error: "printer.ip obrigatório para modo network" }));
+            return;
+          }
+
+          console.log(`[Print] Enviando para ${ip}:${port} — Senha: ${ticket.displayNumber}`);
+
+          try {
+            await sendToPrinter(ip, port, escPosData);
+            console.log(`[Print] ✅ Impresso via rede: ${ticket.displayNumber}`);
+            res.writeHead(200, { ...corsHeaders(), "Content-Type": "application/json" });
+            res.end(JSON.stringify({ success: true, mode: "network", displayNumber: ticket.displayNumber }));
+            return;
+          } catch (networkErr) {
+            const canFallbackUsb = printer?.allowUsbFallback !== false;
+            if (!canFallbackUsb) {
+              throw networkErr;
+            }
+
+            console.warn(`[Print] Rede falhou (${networkErr.message}). Tentando USB local...`);
+            const usbResult = await sendToLocalUsbPrinter(escPosData, printer || {});
+            console.log(`[Print] ✅ Impresso via USB fallback (${usbResult.target}): ${ticket.displayNumber}`);
+            res.writeHead(200, { ...corsHeaders(), "Content-Type": "application/json" });
+            res.end(JSON.stringify({ success: true, mode: "usb_fallback", target: usbResult.target, displayNumber: ticket.displayNumber }));
+            return;
+          }
         }
 
-        const escPosData = buildEscPos(ticket, layout || {}, printer || {});
-
-        console.log(`[Print] Enviando para ${ip}:${port} — Senha: ${ticket.displayNumber}`);
-
-        await sendToPrinter(ip, port, escPosData);
-
-        console.log(`[Print] ✅ Impresso com sucesso: ${ticket.displayNumber}`);
+        const usbResult = await sendToLocalUsbPrinter(escPosData, printer || {});
+        console.log(`[Print] ✅ Impresso via USB (${usbResult.target}): ${ticket.displayNumber}`);
 
         res.writeHead(200, { ...corsHeaders(), "Content-Type": "application/json" });
-        res.end(JSON.stringify({ success: true, displayNumber: ticket.displayNumber }));
+        res.end(JSON.stringify({ success: true, mode: "usb", target: usbResult.target, displayNumber: ticket.displayNumber }));
       } catch (err) {
         console.error(`[Print] ❌ Erro:`, err.message);
         res.writeHead(500, { ...corsHeaders(), "Content-Type": "application/json" });
@@ -195,6 +285,6 @@ const server = http.createServer(async (req, res) => {
 
 server.listen(PORT, "0.0.0.0", () => {
   console.log(`🖨️  Print Server rodando em http://0.0.0.0:${PORT}`);
-  console.log(`   POST /print — Envia ESC/POS para impressora de rede`);
+  console.log(`   POST /print — Envia ESC/POS para impressora de rede ou USB local`);
   console.log(`   GET  /health — Health check`);
 });
