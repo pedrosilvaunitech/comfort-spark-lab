@@ -19,6 +19,8 @@ export interface PrintConfig {
   printName: boolean;
   printMode: "fast" | "detailed";
   paperSize: "58mm" | "80mm";
+  printFont: "monospace" | "sans-serif" | "serif";
+  rotate180: boolean;
 }
 
 export interface TicketLayout {
