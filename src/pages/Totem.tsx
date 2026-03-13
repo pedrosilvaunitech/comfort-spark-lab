@@ -238,7 +238,7 @@ const Totem = () => {
         <Card className="w-full max-w-[min(28rem,90vw)] animate-ticket-pulse">
           <CardContent className="p-[clamp(1.5rem,4vw,3.5rem)] text-center space-y-[2vh]">
             <p className="text-[clamp(0.75rem,1.2vw,1rem)] text-muted-foreground font-medium uppercase tracking-wider">Sua senha é</p>
-            <div className="text-[clamp(3rem,10vw,7rem)] font-black text-primary tracking-widest">{generatedTicket.display_number}</div>
+            <div className="text-[clamp(2.5rem,8vw,6rem)] font-black text-primary tracking-widest whitespace-nowrap">{generatedTicket.display_number}</div>
             <div className="text-[clamp(0.9rem,1.5vw,1.3rem)] text-muted-foreground">
               {generatedTicket.ticket_type === "priority" && "🔴 Prioritário"}
               {generatedTicket.ticket_type === "preferential" && "💙 Preferencial"}
