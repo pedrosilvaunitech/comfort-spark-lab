@@ -327,23 +327,35 @@ export async function getPendingPrints() {
 
 export async function resetAllTicketsComplete() {
   const today = new Date().toISOString().split("T")[0];
+  const dayStart = `${today}T00:00:00`;
+  const resetTimestamp = new Date().toISOString();
 
-  // Reset all counters' current ticket
-  await supabase.from("counters").update({ current_ticket_id: null }).neq("id", "00000000-0000-0000-0000-000000000000");
+  const [counterReset, waitingReset, calledReset, sequenceReset] = await Promise.all([
+    supabase
+      .from("counters")
+      .update({ current_ticket_id: null })
+      .neq("id", "00000000-0000-0000-0000-000000000000"),
+    // Clear old leftovers from queue, regardless of creation date
+    supabase
+      .from("tickets")
+      .update({ status: "cancelled", completed_at: resetTimestamp })
+      .eq("status", "waiting"),
+    // Clear today's called/history from panel and counter lists
+    supabase
+      .from("tickets")
+      .update({ status: "cancelled", completed_at: resetTimestamp })
+      .in("status", ["called", "in_service", "completed", "no_show"])
+      .gte("called_at", dayStart),
+    supabase
+      .from("daily_sequence")
+      .update({ last_number: 0 })
+      .eq("date", today),
+  ]);
 
-  // Cancel ALL tickets from today (waiting, called, in_service, completed, no_show)
-  // This clears them from "recent calls" but they remain in reports
-  await supabase
-    .from("tickets")
-    .update({ status: "cancelled", completed_at: new Date().toISOString() })
-    .gte("created_at", `${today}T00:00:00`)
-    .in("status", ["waiting", "called", "in_service", "completed", "no_show"]);
-
-  // Reset daily sequence to 0
-  await supabase
-    .from("daily_sequence")
-    .update({ last_number: 0 })
-    .eq("date", today);
+  if (counterReset.error) throw counterReset.error;
+  if (waitingReset.error) throw waitingReset.error;
+  if (calledReset.error) throw calledReset.error;
+  if (sequenceReset.error) throw sequenceReset.error;
 }
 
 // Keep old names for backward compat
