@@ -12,7 +12,7 @@ import { toast } from "sonner";
 import { type ScreenConfig, defaultScreenConfig, loadScreenConfig } from "@/lib/screen-config";
 
 const FONT_OPTIONS = [
-  { value: "", label: "Padrão do Sistema" },
+  { value: "default", label: "Padrão do Sistema" },
   { value: "'Inter', sans-serif", label: "Inter" },
   { value: "'Roboto', sans-serif", label: "Roboto" },
   { value: "'Open Sans', sans-serif", label: "Open Sans" },
