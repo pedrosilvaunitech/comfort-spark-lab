@@ -41,7 +41,7 @@ import {
 import { cn } from "@/lib/utils";
 
 type AdminSection =
-  | "queue" | "counters" | "services" | "priority" | "users"
+  | "queue" | "counters" | "services" | "priority" | "users" | "permissions"
   | "totem" | "screens" | "printer" | "voice"
   | "reports" | "logs";
 
