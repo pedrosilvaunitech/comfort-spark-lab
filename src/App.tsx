@@ -33,6 +33,7 @@ const App = () => (
             <Route path="/totem" element={<Totem />} />
             <Route path="/totem/setup" element={<TotemSetup />} />
             <Route path="/totem-setup" element={<TotemSetup />} />
+            <Route path="/panel" element={<Panel />} />
             <Route path="/counter" element={<Counter />} />
             <Route path="/admin" element={<Admin />} />
             <Route path="/setup" element={<SetupAdmin />} />
