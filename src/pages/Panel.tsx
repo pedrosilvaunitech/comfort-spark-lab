@@ -1,14 +1,9 @@
 import { useRealtimeTickets } from "@/hooks/use-realtime-tickets";
-import { useEffect, useRef, useState } from "react";
+import { useEffect, useRef, useState, useCallback } from "react";
 import { getSystemConfig } from "@/lib/ticket-service";
 import { type VoiceSettings, defaultVoiceSettings, formatPrefixForSpeech, formatNumberForSpeech } from "@/components/admin/VoiceConfig";
 import { useScreenConfig } from "@/hooks/use-screen-config";
-
-function parseTicketNumber(displayNumber: string): string {
-  const prefix = displayNumber.replace(/[0-9]/g, "");
-  const num = parseInt(displayNumber.replace(/[^0-9]/g, ""), 10);
-  return `${prefix} ${num}`;
-}
+import { Volume2 } from "lucide-react";
 
 function playBeep(): Promise<void> {
   return new Promise((resolve) => {
@@ -75,6 +70,10 @@ async function processSpeechQueue() {
   const { text, settings } = job;
 
   try {
+    // Cancel any stuck speech
+    speechSynthesis.cancel();
+    await new Promise((r) => setTimeout(r, 100));
+
     if (settings.beepEnabled) await playBeep();
 
     for (let i = 0; i < settings.repeatCount; i++) {
@@ -85,8 +84,21 @@ async function processSpeechQueue() {
         utterance.pitch = settings.pitch;
         const voice = findVoice(settings);
         if (voice) utterance.voice = voice;
-        utterance.onend = () => resolve();
-        utterance.onerror = () => resolve();
+        
+        // Safety timeout in case onend never fires
+        const safetyTimeout = setTimeout(() => {
+          console.warn("[Panel] Speech safety timeout fired");
+          resolve();
+        }, 15000);
+        
+        utterance.onend = () => { clearTimeout(safetyTimeout); resolve(); };
+        utterance.onerror = (e) => { 
+          clearTimeout(safetyTimeout);
+          console.error("[Panel] Speech error:", e);
+          resolve(); 
+        };
+        
+        console.log("[Panel] Speaking:", text);
         speechSynthesis.speak(utterance);
       });
       if (i < settings.repeatCount - 1) {
@@ -94,21 +106,20 @@ async function processSpeechQueue() {
       }
     }
 
-    // Configurable delay between consecutive announcements
     const delayMs = ((settings.delayBetween ?? 2) * 1000);
     if (delayMs > 0 && speechQueue.length > 0) {
       await new Promise((r) => setTimeout(r, delayMs));
     }
-  } catch {
-    // ignore speech errors
+  } catch (err) {
+    console.error("[Panel] Speech queue error:", err);
   } finally {
     isSpeaking = false;
-    // Process next in queue
     processSpeechQueue();
   }
 }
 
 function enqueueSpeech(text: string, settings: VoiceSettings) {
+  console.log("[Panel] Enqueuing speech:", text);
   speechQueue.push({ text, settings });
   processSpeechQueue();
 }
@@ -129,37 +140,63 @@ function buildSpeechText(displayNumber: string, counterName: string, settings: V
   return text.replace("{guiche}", counterName).replace(/\s+/g, " ").trim();
 }
 
+// ============ AUDIO ACTIVATION SCREEN ============
+function AudioActivation({ onActivated }: { onActivated: () => void }) {
+  const handleActivate = useCallback(() => {
+    try {
+      // Unlock AudioContext
+      const ctx = new (window.AudioContext || (window as any).webkitAudioContext)();
+      const osc = ctx.createOscillator();
+      const gain = ctx.createGain();
+      osc.connect(gain);
+      gain.connect(ctx.destination);
+      gain.gain.setValueAtTime(0.01, ctx.currentTime);
+      osc.start();
+      osc.stop(ctx.currentTime + 0.01);
+      
+      // Unlock speechSynthesis with a real user gesture
+      const u = new SpeechSynthesisUtterance(".");
+      u.volume = 0.01;
+      u.rate = 10;
+      u.lang = "pt-BR";
+      speechSynthesis.speak(u);
+      
+      // Load voices
+      speechSynthesis.getVoices();
+    } catch (e) {
+      console.warn("[Panel] Audio unlock partial failure:", e);
+    }
+    
+    onActivated();
+  }, [onActivated]);
+
+  return (
+    <div className="min-h-screen min-h-[100dvh] flex flex-col items-center justify-center bg-[#1e3a5f]">
+      <div className="text-center space-y-8">
+        <Volume2 className="w-24 h-24 text-white/80 mx-auto animate-pulse" />
+        <h1 className="text-4xl font-bold text-white">Painel de Chamadas</h1>
+        <p className="text-xl text-white/70 max-w-md">
+          Clique no botão abaixo para ativar o áudio do painel
+        </p>
+        <button
+          onClick={handleActivate}
+          className="px-12 py-6 bg-yellow-500 hover:bg-yellow-400 text-gray-900 font-bold text-2xl rounded-2xl shadow-lg transition-all hover:scale-105 active:scale-95"
+        >
+          🔊 Ativar Áudio e Iniciar
+        </button>
+      </div>
+    </div>
+  );
+}
+
+// ============ MAIN PANEL ============
 const Panel = () => {
+  const [audioActivated, setAudioActivated] = useState(false);
   const { calledTickets, lastCalled } = useRealtimeTickets();
   const lastCalledKeyRef = useRef<string | null>(null);
   const [voicesLoaded, setVoicesLoaded] = useState(false);
   const voiceSettingsRef = useRef<VoiceSettings>(defaultVoiceSettings);
   const { config: screenConfig } = useScreenConfig();
-
-  // Auto-unlock audio on first user interaction
-  useEffect(() => {
-    const unlock = () => {
-      try {
-        const ctx = new (window.AudioContext || (window as any).webkitAudioContext)();
-        const osc = ctx.createOscillator();
-        osc.connect(ctx.destination);
-        osc.start();
-        osc.stop(ctx.currentTime + 0.001);
-        const u = new SpeechSynthesisUtterance("");
-        u.volume = 0;
-        speechSynthesis.speak(u);
-      } catch {}
-      window.removeEventListener("click", unlock);
-      window.removeEventListener("touchstart", unlock);
-    };
-    window.addEventListener("click", unlock);
-    window.addEventListener("touchstart", unlock);
-    unlock();
-    return () => {
-      window.removeEventListener("click", unlock);
-      window.removeEventListener("touchstart", unlock);
-    };
-  }, []);
 
   useEffect(() => {
     getSystemConfig("voice_settings").then((data) => {
@@ -170,16 +207,34 @@ const Panel = () => {
   useEffect(() => {
     const loadVoices = () => {
       const voices = speechSynthesis.getVoices();
-      if (voices.length > 0) setVoicesLoaded(true);
+      if (voices.length > 0) {
+        setVoicesLoaded(true);
+        console.log("[Panel] Voices loaded:", voices.length);
+      }
     };
     loadVoices();
     speechSynthesis.addEventListener("voiceschanged", loadVoices);
     return () => speechSynthesis.removeEventListener("voiceschanged", loadVoices);
   }, []);
 
+  // Keep speechSynthesis alive (Chrome pauses it after ~15s of inactivity)
   useEffect(() => {
+    if (!audioActivated) return;
+    const keepAlive = setInterval(() => {
+      if (!speechSynthesis.speaking) {
+        speechSynthesis.cancel(); // prevent queue buildup
+      }
+    }, 10000);
+    return () => clearInterval(keepAlive);
+  }, [audioActivated]);
+
+  useEffect(() => {
+    if (!audioActivated) return;
+    
     const calledKey = lastCalled ? `${lastCalled.id}_${(lastCalled as any).called_at}` : null;
-    if (lastCalled && calledKey !== lastCalledKeyRef.current) {
+    console.log("[Panel] lastCalled changed:", calledKey, "prev:", lastCalledKeyRef.current);
+    
+    if (lastCalled && calledKey && calledKey !== lastCalledKeyRef.current) {
       lastCalledKeyRef.current = calledKey;
       const counterName = (lastCalled as any).counters?.name || "guichê";
       const customText = (lastCalled as any).custom_voice_text;
@@ -192,7 +247,11 @@ const Panel = () => {
         enqueueSpeech(text, settings);
       }
     }
-  }, [lastCalled, voicesLoaded]);
+  }, [lastCalled, voicesLoaded, audioActivated]);
+
+  if (!audioActivated) {
+    return <AudioActivation onActivated={() => setAudioActivated(true)} />;
+  }
 
   const currentCalled = calledTickets[0];
   const recentCalled = calledTickets.slice(1, 5);
