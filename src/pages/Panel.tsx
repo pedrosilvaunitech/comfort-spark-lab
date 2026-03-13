@@ -93,6 +93,12 @@ async function processSpeechQueue() {
         await new Promise((r) => setTimeout(r, 1000));
       }
     }
+
+    // Configurable delay between consecutive announcements
+    const delayMs = ((settings.delayBetween ?? 2) * 1000);
+    if (delayMs > 0 && speechQueue.length > 0) {
+      await new Promise((r) => setTimeout(r, delayMs));
+    }
   } catch {
     // ignore speech errors
   } finally {
