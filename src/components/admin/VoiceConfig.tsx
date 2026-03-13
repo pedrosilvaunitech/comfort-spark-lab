@@ -38,6 +38,7 @@ export const defaultVoiceSettings: VoiceSettings = {
   prefixFormat: "senha",
   customPrefix: "",
   speakPrefix: true,
+  delayBetween: 2,
 };
 
 export function formatNumberForSpeech(displayNumber: string, settings: VoiceSettings): string {
