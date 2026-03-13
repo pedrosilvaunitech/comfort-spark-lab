@@ -88,6 +88,22 @@ const TotemSetup = () => {
 
   const handleTestPrint = async () => {
     try {
+      if (printMode === "android_usb") {
+        const { printViaAndroidUsb } = await import("@/lib/native-print");
+        const testTicket = {
+          displayNumber: "T0001",
+          type: "normal",
+          patientName: "Teste de Impressão",
+          patientCpf: null,
+          createdAt: new Date().toISOString(),
+        };
+        const layout = { clinicName: "UniTechBR", header: "Teste", footer: "OK!", showDateTime: true };
+        const printerConfig = { autoCut: config.autoCut, printName: config.printName, printCpf: config.printCpf, paperSize: config.paperSize };
+        const success = await printViaAndroidUsb(testTicket, layout, printerConfig);
+        if (success) toast.success("Impressão de teste enviada!");
+        else toast.error("Falha na impressão. Verifique a conexão USB.");
+        return;
+      }
       if (printMode === "webusb") {
         const { printViaWebUsb } = await import("@/lib/native-print");
         const testTicket = {
