@@ -47,13 +47,16 @@ const Totem = () => {
       if (data) setTotemConfig(data as unknown as TotemConfig);
     });
 
-    const localConfig = getLocalPrinterConfig();
-    if (localConfig.paired) {
-      autoConnectWebUsbPrinter(localConfig.vendorId, localConfig.productId)
-        .then((connected) => {
-          if (connected) console.log("[Totem] WebUSB printer auto-connected");
-          else console.warn("[Totem] WebUSB printer not found");
-        });
+    // Only try WebUSB auto-connect on non-Android platforms
+    if (!isAndroid()) {
+      const localConfig = getLocalPrinterConfig();
+      if (localConfig.paired) {
+        autoConnectWebUsbPrinter(localConfig.vendorId, localConfig.productId)
+          .then((connected) => {
+            if (connected) console.log("[Totem] WebUSB printer auto-connected");
+            else console.warn("[Totem] WebUSB printer not found");
+          });
+      }
     }
 
     const channel = supabase
