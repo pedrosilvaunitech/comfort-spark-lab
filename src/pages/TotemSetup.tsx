@@ -15,9 +15,9 @@ import {
   clearLocalPrinterConfig,
   type LocalPrinterConfig,
 } from "@/lib/local-printer-config";
-import { hasWebUsb, pairWebUsbPrinter, isWebUsbPrinterConnected } from "@/lib/native-print";
+import { hasWebUsb, pairWebUsbPrinter, isWebUsbPrinterConnected, isAndroid, UsbPrinter } from "@/lib/native-print";
 
-type PrintMode = "webusb" | "network" | "browser";
+type PrintMode = "android_usb" | "webusb" | "network" | "browser";
 
 const TotemSetup = () => {
   const navigate = useNavigate();
@@ -25,7 +25,10 @@ const TotemSetup = () => {
   const [connectionStatus, setConnectionStatus] = useState<"checking" | "connected" | "disconnected">("checking");
   const [webUsbSupported, setWebUsbSupported] = useState(false);
   const [printMode, setPrintMode] = useState<PrintMode>(() => {
-    return (localStorage.getItem("unitech_print_mode") as PrintMode) || "webusb";
+    const stored = localStorage.getItem("unitech_print_mode") as PrintMode;
+    if (stored) return stored;
+    if (isAndroid()) return "android_usb";
+    return "webusb";
   });
   const [networkIp, setNetworkIp] = useState(() => localStorage.getItem("unitech_printer_ip") || "");
   const [networkPort, setNetworkPort] = useState(() => localStorage.getItem("unitech_printer_port") || "9100");
@@ -85,6 +88,22 @@ const TotemSetup = () => {
 
   const handleTestPrint = async () => {
     try {
+      if (printMode === "android_usb") {
+        const { printViaAndroidUsb } = await import("@/lib/native-print");
+        const testTicket = {
+          displayNumber: "T0001",
+          type: "normal",
+          patientName: "Teste de Impressão",
+          patientCpf: null,
+          createdAt: new Date().toISOString(),
+        };
+        const layout = { clinicName: "UniTechBR", header: "Teste", footer: "OK!", showDateTime: true };
+        const printerConfig = { autoCut: config.autoCut, printName: config.printName, printCpf: config.printCpf, paperSize: config.paperSize };
+        const success = await printViaAndroidUsb(testTicket, layout, printerConfig);
+        if (success) toast.success("Impressão de teste enviada!");
+        else toast.error("Falha na impressão. Verifique a conexão USB.");
+        return;
+      }
       if (printMode === "webusb") {
         const { printViaWebUsb } = await import("@/lib/native-print");
         const testTicket = {
@@ -236,18 +255,34 @@ const TotemSetup = () => {
             <CardDescription>Escolha como este dispositivo vai imprimir</CardDescription>
           </CardHeader>
           <CardContent className="space-y-3">
-            <div
-              className={`flex items-center gap-3 p-3 rounded-lg border cursor-pointer transition-colors ${printMode === "webusb" ? "border-primary bg-primary/5" : "border-border"}`}
-              onClick={() => webUsbSupported && handlePrintModeChange("webusb")}
-            >
-              <Usb className="h-5 w-5 text-primary" />
-              <div className="flex-1">
-                <p className="font-medium text-sm">USB Direto (WebUSB)</p>
-                <p className="text-xs text-muted-foreground">Impressora conectada por cabo USB</p>
+            {isAndroid() && (
+              <div
+                className={`flex items-center gap-3 p-3 rounded-lg border cursor-pointer transition-colors ${printMode === "android_usb" ? "border-primary bg-primary/5" : "border-border"}`}
+                onClick={() => handlePrintModeChange("android_usb")}
+              >
+                <Usb className="h-5 w-5 text-primary" />
+                <div className="flex-1">
+                  <p className="font-medium text-sm">USB Nativo (Android)</p>
+                  <p className="text-xs text-muted-foreground">Impressora USB conectada ao dispositivo</p>
+                </div>
+                {printMode === "android_usb" && <Check className="h-4 w-4 text-primary" />}
               </div>
-              {!webUsbSupported && <Badge variant="secondary" className="text-xs">Indisponível</Badge>}
-              {printMode === "webusb" && <Check className="h-4 w-4 text-primary" />}
-            </div>
+            )}
+
+            {!isAndroid() && (
+              <div
+                className={`flex items-center gap-3 p-3 rounded-lg border cursor-pointer transition-colors ${printMode === "webusb" ? "border-primary bg-primary/5" : "border-border"}`}
+                onClick={() => webUsbSupported && handlePrintModeChange("webusb")}
+              >
+                <Usb className="h-5 w-5 text-primary" />
+                <div className="flex-1">
+                  <p className="font-medium text-sm">USB Direto (WebUSB)</p>
+                  <p className="text-xs text-muted-foreground">Impressora conectada por cabo USB</p>
+                </div>
+                {!webUsbSupported && <Badge variant="secondary" className="text-xs">Indisponível</Badge>}
+                {printMode === "webusb" && <Check className="h-4 w-4 text-primary" />}
+              </div>
+            )}
 
             <div
               className={`flex items-center gap-3 p-3 rounded-lg border cursor-pointer transition-colors ${printMode === "network" ? "border-primary bg-primary/5" : "border-border"}`}
@@ -274,6 +309,55 @@ const TotemSetup = () => {
             </div>
           </CardContent>
         </Card>
+
+        {/* Android USB Config */}
+        {printMode === "android_usb" && (
+          <Card>
+            <CardHeader>
+              <CardTitle className="flex items-center gap-2">
+                <Usb className="h-5 w-5" />
+                Impressora USB (Android)
+              </CardTitle>
+              <CardDescription>A impressora USB será detectada automaticamente</CardDescription>
+            </CardHeader>
+            <CardContent className="space-y-4">
+              <p className="text-sm text-muted-foreground">
+                Conecte a impressora térmica via cabo USB/OTG. O sistema detecta e conecta automaticamente.
+              </p>
+              <Button
+                onClick={async () => {
+                  try {
+                    const status = await UsbPrinter.isConnected();
+                    if (status.connected) {
+                      toast.success(`Impressora conectada: ${status.deviceName || "USB"}`);
+                    } else {
+                      const devices = await UsbPrinter.listDevices();
+                      if (devices.devices.length > 0) {
+                        const p = devices.devices[0];
+                        const r = await UsbPrinter.connect({ vendorId: p.vendorId, productId: p.productId });
+                        if (r.success) toast.success(`Conectado a: ${p.name}`);
+                        else toast.error("Falha ao conectar");
+                      } else {
+                        toast.error("Nenhuma impressora USB encontrada");
+                      }
+                    }
+                  } catch (err: any) {
+                    toast.error(err.message || "Erro ao verificar impressora");
+                  }
+                }}
+                variant="outline"
+                className="w-full gap-2"
+              >
+                <RefreshCw className="h-4 w-4" />
+                Verificar Conexão
+              </Button>
+              <Button onClick={handleTestPrint} variant="outline" className="w-full gap-2">
+                <Printer className="h-4 w-4" />
+                Impressão Teste
+              </Button>
+            </CardContent>
+          </Card>
+        )}
 
         {/* WebUSB Config */}
         {printMode === "webusb" && (

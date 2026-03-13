@@ -27,13 +27,9 @@ const Login = () => {
   useEffect(() => {
     const checkAdmin = async () => {
       try {
-        const { data, error } = await supabase
-          .from("user_roles")
-          .select("id")
-          .eq("role", "admin")
-          .limit(1);
+        const { data, error } = await supabase.rpc("admin_exists");
         if (!error) {
-          setHasAdmin(data && data.length > 0);
+          setHasAdmin(!!data);
         }
       } catch {
         // If error, assume admin exists (safe default)
