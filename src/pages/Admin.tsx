@@ -36,7 +36,7 @@ import {
   Printer, Settings, FileText, History, RefreshCw, Save, TestTube,
   LayoutTemplate, Users, Monitor, BarChart3, LogOut, Trash2, Volume2,
   ListOrdered, Tablet, Palette, ShieldAlert, Menu, X, ChevronRight,
-  Home, ExternalLink,
+  Home, ExternalLink, ShieldCheck,
 } from "lucide-react";
 import { cn } from "@/lib/utils";
 
