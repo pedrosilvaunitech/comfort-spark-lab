@@ -15,7 +15,7 @@ import {
   clearLocalPrinterConfig,
   type LocalPrinterConfig,
 } from "@/lib/local-printer-config";
-import { hasWebUsb, pairWebUsbPrinter, isWebUsbPrinterConnected, isAndroid, UsbPrinter } from "@/lib/native-print";
+import { hasWebUsb, getWebUsbBlockReason, pairWebUsbPrinter, isWebUsbPrinterConnected, isAndroid, UsbPrinter } from "@/lib/native-print";
 
 type PrintMode = "android_usb" | "webusb" | "network" | "browser";
 
