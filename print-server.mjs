@@ -32,6 +32,9 @@ const CMD = {
   PARTIAL_CUT: Buffer.from([GS, 0x56, 0x01]),
   FEED3: Buffer.from([ESC, 0x64, 0x03]),
   LINE: Buffer.from("--------------------------------\n"),
+  // 180° rotation (upside-down mode)
+  ROTATE_ON: Buffer.from([ESC, 0x7B, 0x01]),
+  ROTATE_OFF: Buffer.from([ESC, 0x7B, 0x00]),
 };
 
 function textToBuffer(text) {
@@ -39,7 +42,14 @@ function textToBuffer(text) {
 }
 
 function buildEscPos(ticket, layout = {}, printer = {}) {
-  const buffers = [CMD.INIT, CMD.CENTER];
+  const buffers = [CMD.INIT];
+
+  // Enable 180° rotation if configured
+  if (printer.rotate180) {
+    buffers.push(CMD.ROTATE_ON);
+  }
+
+  buffers.push(CMD.CENTER);
 
   // Header / clinic name
   if (layout.clinicName) {
@@ -92,7 +102,15 @@ function buildEscPos(ticket, layout = {}, printer = {}) {
 
   // Feed + Cut
   buffers.push(CMD.FEED3);
+
+  // Disable rotation before cut
+  if (printer.rotate180) {
+    buffers.push(CMD.ROTATE_OFF);
+  }
+
   if (printer.autoCut !== false) {
+    buffers.push(CMD.PARTIAL_CUT);
+  }
     buffers.push(CMD.PARTIAL_CUT);
   }
 

@@ -19,6 +19,8 @@ export interface PrintConfig {
   printName: boolean;
   printMode: "fast" | "detailed";
   paperSize: "58mm" | "80mm";
+  printFont: "monospace" | "sans-serif" | "serif";
+  rotate180: boolean;
 }
 
 export interface TicketLayout {
@@ -44,6 +46,9 @@ function buildTicketHtml(ticket: Ticket, layout: TicketLayout, config: PrintConf
   const date = new Date(ticket.created_at);
   const dateStr = date.toLocaleDateString("pt-BR");
   const timeStr = date.toLocaleTimeString("pt-BR", { hour: "2-digit", minute: "2-digit" });
+  const fontFamily = config.printFont === "sans-serif" ? "Arial, sans-serif"
+    : config.printFont === "serif" ? "Georgia, serif" : "monospace";
+  const rotateStyle = config.rotate180 ? "transform:rotate(180deg);transform-origin:center center;" : "";
 
   const typeLabel: Record<string, string> = {
     normal: "Normal",
@@ -52,7 +57,7 @@ function buildTicketHtml(ticket: Ticket, layout: TicketLayout, config: PrintConf
   };
 
   let html = `
-    <div style="width:${width};font-family:monospace;padding:8px;text-align:${align};line-height:${layout.lineSpacing + 0.4};">
+    <div style="width:${width};font-family:${fontFamily};padding:8px;text-align:${align};line-height:${layout.lineSpacing + 0.4};${rotateStyle}">
       ${layout.clinicName ? `<div style="font-size:16px;font-weight:bold;margin-bottom:4px;">${layout.clinicName}</div>` : ""}
       ${layout.header ? `<div style="font-size:12px;margin-bottom:8px;">${layout.header}</div>` : ""}
       <div style="border-top:1px dashed #000;margin:4px 0;"></div>
@@ -169,6 +174,7 @@ export async function printViaPrintServer(ticket: Ticket, serverUrl?: string): P
         printName: localConfig.printName ?? config.printName ?? true,
         printCpf: localConfig.printCpf ?? config.printCpf ?? false,
         allowUsbFallback: true,
+        rotate180: config.rotate180 ?? false,
       },
     };
 
@@ -286,6 +292,7 @@ export async function printViaWebUsbMethod(ticket: Ticket): Promise<boolean> {
       printName: localConfig.printName,
       printCpf: localConfig.printCpf,
       paperSize: localConfig.paperSize,
+      rotate180: ((await getSystemConfig("printer")) as unknown as PrintConfig)?.rotate180 ?? false,
     };
 
     const success = await printViaWebUsb(
@@ -357,6 +364,7 @@ export async function printViaNetworkIp(ticket: Ticket): Promise<boolean> {
         paperSize: localConfig.paperSize ?? config?.paperSize ?? "80mm",
         printName: localConfig.printName ?? config?.printName ?? true,
         printCpf: localConfig.printCpf ?? config?.printCpf ?? true,
+        rotate180: config?.rotate180 ?? false,
       },
     };
 

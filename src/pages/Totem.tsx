@@ -182,15 +182,15 @@ const Totem = () => {
                 className="h-full transition-all duration-200 hover:scale-105 hover:shadow-xl cursor-pointer border-2 border-transparent hover:border-accent overflow-hidden"
                 style={buttonStyle}
               >
-                <CardContent className="flex flex-col items-center justify-center p-[clamp(1.5rem,3vw,3rem)] gap-[1.5vh]">
+                <CardContent className="flex flex-col items-center justify-center p-[clamp(1rem,2.5vw,2.5rem)] gap-[1vh]">
                   <div className="transition-colors" style={screenConfig.totemButtonTextColor ? { color: screenConfig.totemButtonTextColor } : {}}>
-                    {iconMap[type.prefix] || <FileText className="h-[clamp(2rem,4vw,4rem)] w-[clamp(2rem,4vw,4rem)]" />}
+                    {iconMap[type.prefix] || <FileText className="h-[clamp(1.5rem,3vw,3rem)] w-[clamp(1.5rem,3vw,3rem)]" />}
                   </div>
-                  <span className="text-[clamp(1rem,2.5vw,2rem)] font-bold" style={screenConfig.totemButtonTextColor ? { color: screenConfig.totemButtonTextColor } : {}}>
+                  <span className="text-[clamp(0.85rem,2vw,1.6rem)] font-bold leading-tight text-center break-words max-w-full" style={screenConfig.totemButtonTextColor ? { color: screenConfig.totemButtonTextColor } : {}}>
                     {type.name}
                   </span>
                   {type.description && (
-                    <span className="text-[clamp(0.7rem,1.2vw,1rem)] text-center opacity-70">{type.description}</span>
+                    <span className="text-[clamp(0.6rem,1vw,0.85rem)] text-center opacity-70 break-words max-w-full leading-snug">{type.description}</span>
                   )}
                 </CardContent>
               </Card>
@@ -238,7 +238,7 @@ const Totem = () => {
         <Card className="w-full max-w-[min(28rem,90vw)] animate-ticket-pulse">
           <CardContent className="p-[clamp(1.5rem,4vw,3.5rem)] text-center space-y-[2vh]">
             <p className="text-[clamp(0.75rem,1.2vw,1rem)] text-muted-foreground font-medium uppercase tracking-wider">Sua senha é</p>
-            <div className="text-[clamp(3rem,10vw,7rem)] font-black text-primary tracking-widest">{generatedTicket.display_number}</div>
+            <div className="text-[clamp(2.5rem,8vw,6rem)] font-black text-primary tracking-widest whitespace-nowrap">{generatedTicket.display_number}</div>
             <div className="text-[clamp(0.9rem,1.5vw,1.3rem)] text-muted-foreground">
               {generatedTicket.ticket_type === "priority" && "🔴 Prioritário"}
               {generatedTicket.ticket_type === "preferential" && "💙 Preferencial"}
