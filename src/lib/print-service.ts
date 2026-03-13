@@ -292,6 +292,7 @@ export async function printViaWebUsbMethod(ticket: Ticket): Promise<boolean> {
       printName: localConfig.printName,
       printCpf: localConfig.printCpf,
       paperSize: localConfig.paperSize,
+      rotate180: ((await getSystemConfig("printer")) as unknown as PrintConfig)?.rotate180 ?? false,
     };
 
     const success = await printViaWebUsb(
