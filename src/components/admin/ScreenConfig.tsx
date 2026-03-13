@@ -243,7 +243,7 @@ export function ScreenConfigPanel() {
               <div className="grid grid-cols-2 gap-3">
                 <div>
                   <Label className="text-xs">Fonte</Label>
-                  <Select value={config.counterFontFamily} onValueChange={(v) => update("counterFontFamily", v)}>
+                  <Select value={config.counterFontFamily || "default"} onValueChange={(v) => update("counterFontFamily", v === "default" ? "" : v)}>
                     <SelectTrigger className="h-8 text-sm"><SelectValue placeholder="Padrão" /></SelectTrigger>
                     <SelectContent>{FONT_OPTIONS.map(f => <SelectItem key={f.value} value={f.value}>{f.label}</SelectItem>)}</SelectContent>
                   </Select>
