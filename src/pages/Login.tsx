@@ -179,6 +179,7 @@ const Login = () => {
     );
   }
 
+  return (
     <div className="min-h-screen bg-background flex items-center justify-center p-6 relative">
       <Link to="/" className="absolute top-4 left-4">
         <Button variant="ghost" size="sm"><ArrowLeft className="h-4 w-4 mr-1" /> Início</Button>
@@ -187,24 +188,61 @@ const Login = () => {
         <CardHeader className="text-center">
           <CardTitle className="flex items-center justify-center gap-2">
             <LogIn className="h-5 w-5" />
-            {step === "credentials" ? "Login" : "Selecione o Guichê"}
+            {step === "credentials"
+              ? showSetup && !hasAdmin
+                ? "Configuração Inicial"
+                : "Login"
+              : "Selecione o Guichê"}
           </CardTitle>
+          {step === "credentials" && !hasAdmin && (
+            <CardDescription>Não há administrador detectado. Você pode criar o primeiro admin.</CardDescription>
+          )}
         </CardHeader>
         <CardContent>
           {step === "credentials" ? (
-            <form onSubmit={handleLogin} className="space-y-4">
-              <div>
-                <Label htmlFor="email">Email</Label>
-                <Input id="email" type="email" value={email} onChange={(e) => setEmail(e.target.value)} required />
+            showSetup && !hasAdmin ? (
+              <form onSubmit={handleSetup} className="space-y-4">
+                <div>
+                  <Label>Nome completo</Label>
+                  <Input value={fullName} onChange={(e) => setFullName(e.target.value)} placeholder="Administrador" required />
+                </div>
+                <div>
+                  <Label>Email</Label>
+                  <Input type="email" value={email} onChange={(e) => setEmail(e.target.value)} placeholder="admin@clinica.com" required />
+                </div>
+                <div>
+                  <Label>Senha</Label>
+                  <Input type="password" value={password} onChange={(e) => setPassword(e.target.value)} placeholder="Mínimo 6 caracteres" required />
+                </div>
+                <Button type="submit" disabled={loading} className="w-full">
+                  {loading ? "Criando..." : "Criar Administrador"}
+                </Button>
+                <Button type="button" variant="outline" className="w-full" onClick={() => setShowSetup(false)}>
+                  Voltar para login
+                </Button>
+              </form>
+            ) : (
+              <div className="space-y-4">
+                <form onSubmit={handleLogin} className="space-y-4">
+                  <div>
+                    <Label htmlFor="email">Email</Label>
+                    <Input id="email" type="email" value={email} onChange={(e) => setEmail(e.target.value)} required />
+                  </div>
+                  <div>
+                    <Label htmlFor="password">Senha</Label>
+                    <Input id="password" type="password" value={password} onChange={(e) => setPassword(e.target.value)} required />
+                  </div>
+                  <Button type="submit" disabled={loading} className="w-full">
+                    {loading ? "Entrando..." : "Entrar"}
+                  </Button>
+                </form>
+                {!hasAdmin && (
+                  <Button type="button" variant="outline" className="w-full" onClick={() => setShowSetup(true)}>
+                    Criar primeiro administrador
+                  </Button>
+                )}
               </div>
-              <div>
-                <Label htmlFor="password">Senha</Label>
-                <Input id="password" type="password" value={password} onChange={(e) => setPassword(e.target.value)} required />
-              </div>
-              <Button type="submit" disabled={loading} className="w-full">
-                {loading ? "Entrando..." : "Entrar"}
-              </Button>
-            </form>
+            )
           ) : (
             <div className="space-y-4">
               <p className="text-sm text-muted-foreground text-center">
