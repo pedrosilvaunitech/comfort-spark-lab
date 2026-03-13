@@ -19,12 +19,19 @@ import { toast } from "sonner";
 import { Link, Navigate, useLocation } from "react-router-dom";
 import { useScreenConfig } from "@/hooks/use-screen-config";
 
+const COUNTER_STORAGE_KEY = "selected_counter_id";
+
 const CounterPage = () => {
   const { user, loading: authLoading, isOperator, signOut } = useAuth();
   const location = useLocation();
-  const [selectedCounterId, setSelectedCounterId] = useState<string>(
-    (location.state as any)?.counterId || ""
-  );
+
+  // Restore from: 1) route state, 2) localStorage, 3) empty
+  const [selectedCounterId, setSelectedCounterId] = useState<string>(() => {
+    const fromState = (location.state as any)?.counterId;
+    if (fromState) return fromState;
+    try { return localStorage.getItem(COUNTER_STORAGE_KEY) || ""; } catch { return ""; }
+  });
+
   const [currentTicket, setCurrentTicket] = useState<any>(null);
   const [loading, setLoading] = useState(false);
   const { counters, waitingTickets, calledTickets, refresh } = useRealtimeTickets();
@@ -32,6 +39,18 @@ const CounterPage = () => {
 
   const selectedCounter = counters.find((c: any) => c.id === selectedCounterId);
 
+  // Persist counter selection to localStorage
+  useEffect(() => {
+    try {
+      if (selectedCounterId) {
+        localStorage.setItem(COUNTER_STORAGE_KEY, selectedCounterId);
+      } else {
+        localStorage.removeItem(COUNTER_STORAGE_KEY);
+      }
+    } catch {}
+  }, [selectedCounterId]);
+
+  // Restore current ticket from counter data (realtime sync)
   useEffect(() => {
     const counterTicket = selectedCounter?.tickets;
     const ticket = Array.isArray(counterTicket) ? counterTicket[0] : counterTicket;
@@ -42,15 +61,17 @@ const CounterPage = () => {
     }
   }, [selectedCounter, counters]);
 
-  const releaseCounter = async (counterId: string) => {
-    await supabase.from("counters").update({ operator_name: null, current_ticket_id: null }).eq("id", counterId);
-  };
-
+  // Re-claim counter on load/reconnect (set operator_name)
   useEffect(() => {
     if (selectedCounterId && user) {
-      supabase.from("counters").update({ operator_name: user.user_metadata?.full_name || user.email }).eq("id", selectedCounterId);
+      supabase.from("counters")
+        .update({ operator_name: user.user_metadata?.full_name || user.email })
+        .eq("id", selectedCounterId);
     }
+  }, [selectedCounterId, user]);
 
+  // Release counter on page unload (beforeunload)
+  useEffect(() => {
     const handleBeforeUnload = () => {
       if (selectedCounterId) {
         const url = `${import.meta.env.VITE_SUPABASE_URL}/rest/v1/counters?id=eq.${selectedCounterId}`;
@@ -71,14 +92,26 @@ const CounterPage = () => {
     window.addEventListener("beforeunload", handleBeforeUnload);
     return () => {
       window.removeEventListener("beforeunload", handleBeforeUnload);
-      if (selectedCounterId) releaseCounter(selectedCounterId);
     };
-  }, [selectedCounterId, user]);
+  }, [selectedCounterId]);
+
+  const releaseCounter = async (counterId: string) => {
+    await supabase.from("counters").update({ operator_name: null, current_ticket_id: null }).eq("id", counterId);
+    try { localStorage.removeItem(COUNTER_STORAGE_KEY); } catch {}
+  };
 
   const handleCallNext = async () => {
     if (!selectedCounterId) { toast.error("Selecione um guichê"); return; }
     setLoading(true);
     try {
+      // Failsafe: if there's a stuck current ticket, complete it first
+      if (currentTicket && currentTicket.id) {
+        await supabase.from("tickets")
+          .update({ status: "completed", completed_at: new Date().toISOString() })
+          .eq("id", currentTicket.id)
+          .in("status", ["called", "in_service"]);
+      }
+
       const ticket = await callNextTicket(selectedCounterId, user?.id);
       if (ticket) {
         setCurrentTicket(ticket);
