@@ -239,18 +239,34 @@ const TotemSetup = () => {
             <CardDescription>Escolha como este dispositivo vai imprimir</CardDescription>
           </CardHeader>
           <CardContent className="space-y-3">
-            <div
-              className={`flex items-center gap-3 p-3 rounded-lg border cursor-pointer transition-colors ${printMode === "webusb" ? "border-primary bg-primary/5" : "border-border"}`}
-              onClick={() => webUsbSupported && handlePrintModeChange("webusb")}
-            >
-              <Usb className="h-5 w-5 text-primary" />
-              <div className="flex-1">
-                <p className="font-medium text-sm">USB Direto (WebUSB)</p>
-                <p className="text-xs text-muted-foreground">Impressora conectada por cabo USB</p>
+            {isAndroid() && (
+              <div
+                className={`flex items-center gap-3 p-3 rounded-lg border cursor-pointer transition-colors ${printMode === "android_usb" ? "border-primary bg-primary/5" : "border-border"}`}
+                onClick={() => handlePrintModeChange("android_usb")}
+              >
+                <Usb className="h-5 w-5 text-primary" />
+                <div className="flex-1">
+                  <p className="font-medium text-sm">USB Nativo (Android)</p>
+                  <p className="text-xs text-muted-foreground">Impressora USB conectada ao dispositivo</p>
+                </div>
+                {printMode === "android_usb" && <Check className="h-4 w-4 text-primary" />}
               </div>
-              {!webUsbSupported && <Badge variant="secondary" className="text-xs">Indisponível</Badge>}
-              {printMode === "webusb" && <Check className="h-4 w-4 text-primary" />}
-            </div>
+            )}
+
+            {!isAndroid() && (
+              <div
+                className={`flex items-center gap-3 p-3 rounded-lg border cursor-pointer transition-colors ${printMode === "webusb" ? "border-primary bg-primary/5" : "border-border"}`}
+                onClick={() => webUsbSupported && handlePrintModeChange("webusb")}
+              >
+                <Usb className="h-5 w-5 text-primary" />
+                <div className="flex-1">
+                  <p className="font-medium text-sm">USB Direto (WebUSB)</p>
+                  <p className="text-xs text-muted-foreground">Impressora conectada por cabo USB</p>
+                </div>
+                {!webUsbSupported && <Badge variant="secondary" className="text-xs">Indisponível</Badge>}
+                {printMode === "webusb" && <Check className="h-4 w-4 text-primary" />}
+              </div>
+            )}
 
             <div
               className={`flex items-center gap-3 p-3 rounded-lg border cursor-pointer transition-colors ${printMode === "network" ? "border-primary bg-primary/5" : "border-border"}`}
