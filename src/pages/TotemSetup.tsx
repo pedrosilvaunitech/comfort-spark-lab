@@ -15,9 +15,9 @@ import {
   clearLocalPrinterConfig,
   type LocalPrinterConfig,
 } from "@/lib/local-printer-config";
-import { hasWebUsb, pairWebUsbPrinter, isWebUsbPrinterConnected } from "@/lib/native-print";
+import { hasWebUsb, pairWebUsbPrinter, isWebUsbPrinterConnected, isAndroid, UsbPrinter } from "@/lib/native-print";
 
-type PrintMode = "webusb" | "network" | "browser";
+type PrintMode = "android_usb" | "webusb" | "network" | "browser";
 
 const TotemSetup = () => {
   const navigate = useNavigate();
