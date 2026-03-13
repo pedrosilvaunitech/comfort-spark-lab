@@ -354,6 +354,21 @@ export function VoiceConfig() {
             />
           </div>
 
+          <div>
+            <Label>Intervalo entre chamadas simultâneas: {settings.delayBetween ?? 2}s</Label>
+            <Slider
+              value={[settings.delayBetween ?? 2]}
+              onValueChange={([v]) => setSettings({ ...settings, delayBetween: v })}
+              min={0}
+              max={10}
+              step={0.5}
+              className="mt-2"
+            />
+            <p className="text-xs text-muted-foreground mt-1">
+              Tempo de espera entre o fim de uma chamada e o início da próxima quando há múltiplas senhas na fila
+            </p>
+          </div>
+
           <Button onClick={handleSave} disabled={saving} className="w-full">
             <Save className="h-4 w-4 mr-2" />
             {saving ? "Salvando..." : "Salvar Configuração"}
