@@ -6,7 +6,7 @@ import { Button } from "@/components/ui/button";
 import { Switch } from "@/components/ui/switch";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
-import { Save, Monitor, Tablet, LayoutDashboard, Settings2 } from "lucide-react";
+import { Save, Monitor, Tablet, LayoutDashboard, Settings2, RotateCcw } from "lucide-react";
 import { supabase } from "@/integrations/supabase/client";
 import { toast } from "sonner";
 import { type ScreenConfig, defaultScreenConfig, loadScreenConfig } from "@/lib/screen-config";
@@ -151,6 +151,14 @@ export function ScreenConfigPanel() {
                   <Switch checked={config.totemShowLogo} onCheckedChange={(v) => update("totemShowLogo", v)} />
                 </div>
               </div>
+              <Button variant="outline" size="sm" className="w-full mt-3" onClick={() => setConfig(prev => ({
+                ...prev,
+                totemTitle: defaultScreenConfig.totemTitle, totemSubtitle: defaultScreenConfig.totemSubtitle,
+                totemBgColor: "", totemTextColor: "", totemButtonBgColor: "", totemButtonTextColor: "",
+                totemButtonRadius: "12", totemFontFamily: "", totemLogoSize: "8", totemShowLogo: true,
+              }))}>
+                <RotateCcw className="h-3 w-3 mr-1" /> Restaurar Padrão do Totem
+              </Button>
             </CardContent>
           </Card>
         </TabsContent>
@@ -196,6 +204,14 @@ export function ScreenConfigPanel() {
                 <Label className="text-xs">Mostrar logo no painel</Label>
                 <Switch checked={config.panelShowLogo} onCheckedChange={(v) => update("panelShowLogo", v)} />
               </div>
+              <Button variant="outline" size="sm" className="w-full mt-3" onClick={() => setConfig(prev => ({
+                ...prev,
+                panelBgColor: "", panelTextColor: "", panelTicketColor: "", panelShowLogo: false,
+                panelTitle: "", panelFontFamily: "", panelHeaderBgColor: "", panelFooterBgColor: "",
+                panelFooterTextColor: "", panelLogoSize: "5",
+              }))}>
+                <RotateCcw className="h-3 w-3 mr-1" /> Restaurar Padrão do Painel
+              </Button>
             </CardContent>
           </Card>
         </TabsContent>
@@ -237,6 +253,14 @@ export function ScreenConfigPanel() {
                   <Switch checked={config.counterShowLogo} onCheckedChange={(v) => update("counterShowLogo", v)} />
                 </div>
               </div>
+              <Button variant="outline" size="sm" className="w-full mt-3" onClick={() => setConfig(prev => ({
+                ...prev,
+                counterShowLogo: false, counterTitle: "Painel do Guichê",
+                counterBgColor: "", counterTextColor: "", counterHeaderBgColor: "", counterHeaderTextColor: "",
+                counterFontFamily: "", counterButtonBgColor: "", counterButtonTextColor: "",
+              }))}>
+                <RotateCcw className="h-3 w-3 mr-1" /> Restaurar Padrão do Guichê
+              </Button>
             </CardContent>
           </Card>
         </TabsContent>
