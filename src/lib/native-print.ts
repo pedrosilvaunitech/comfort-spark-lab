@@ -182,6 +182,11 @@ export function generateEscPosBytes(
 
   pushBytes(LF, LF, LF);
 
+  // Disable rotation before cut
+  if (config.rotate180) {
+    pushBytes(ESC, 0x7B, 0x00);
+  }
+
   if (config.autoCut !== false) {
     pushBytes(GS, 0x56, 0x42, 0x03);
   }
