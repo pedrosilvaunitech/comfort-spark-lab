@@ -1,6 +1,7 @@
 @echo off
 chcp 65001 >nul
 title Sistema de Senhas - Build .EXE
+cd /d "%~dp0"
 
 echo ========================================
 echo   Build do .EXE (Electron)
