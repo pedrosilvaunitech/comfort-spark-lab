@@ -1,6 +1,6 @@
 /**
  * Print Server Local — Recebe requisições HTTP do frontend e envia
- * comandos ESC/POS para impressoras de rede via TCP (porta 9100).
+ * comandos ESC/POS para impressoras de rede (TCP 9100) ou USB local.
  *
  * Uso: node print-server.mjs
  * PM2:  pm2 start ecosystem.config.cjs
