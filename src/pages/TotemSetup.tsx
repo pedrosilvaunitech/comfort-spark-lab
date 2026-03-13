@@ -383,7 +383,7 @@ const TotemSetup = () => {
             <CardContent className="space-y-4">
               {!webUsbSupported && (
                 <div className="p-3 rounded-lg bg-destructive/10 text-destructive text-sm">
-                  ⚠️ WebUSB não suportado. Use Chrome no Android ou desktop, fora de iframes.
+                  ⚠️ {webUsbReason || "WebUSB não suportado. Use Chrome em HTTPS e fora de iframes."}
                 </div>
               )}
 
