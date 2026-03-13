@@ -102,25 +102,34 @@ const Panel = () => {
   const { calledTickets, lastCalled } = useRealtimeTickets();
   const lastCalledKeyRef = useRef<string | null>(null);
   const [voicesLoaded, setVoicesLoaded] = useState(false);
-  const [audioUnlocked, setAudioUnlocked] = useState(false);
   const voiceSettingsRef = useRef<VoiceSettings>(defaultVoiceSettings);
   const { config: screenConfig } = useScreenConfig();
 
-  const unlockAudio = () => {
-    // Create and immediately close an AudioContext to unlock audio
-    try {
-      const ctx = new (window.AudioContext || (window as any).webkitAudioContext)();
-      const osc = ctx.createOscillator();
-      osc.connect(ctx.destination);
-      osc.start();
-      osc.stop(ctx.currentTime + 0.001);
-      // Also unlock speechSynthesis
-      const u = new SpeechSynthesisUtterance("");
-      u.volume = 0;
-      speechSynthesis.speak(u);
-    } catch {}
-    setAudioUnlocked(true);
-  };
+  // Auto-unlock audio on first user interaction
+  useEffect(() => {
+    const unlock = () => {
+      try {
+        const ctx = new (window.AudioContext || (window as any).webkitAudioContext)();
+        const osc = ctx.createOscillator();
+        osc.connect(ctx.destination);
+        osc.start();
+        osc.stop(ctx.currentTime + 0.001);
+        const u = new SpeechSynthesisUtterance("");
+        u.volume = 0;
+        speechSynthesis.speak(u);
+      } catch {}
+      window.removeEventListener("click", unlock);
+      window.removeEventListener("touchstart", unlock);
+    };
+    window.addEventListener("click", unlock);
+    window.addEventListener("touchstart", unlock);
+    // Also try immediately
+    unlock();
+    return () => {
+      window.removeEventListener("click", unlock);
+      window.removeEventListener("touchstart", unlock);
+    };
+  }, []);
 
   useEffect(() => {
     getSystemConfig("voice_settings").then((data) => {
@@ -186,26 +195,8 @@ const Panel = () => {
   const footerTextStyle = screenConfig.panelFooterTextColor ? { color: screenConfig.panelFooterTextColor } : {};
   const logoSize = screenConfig.panelLogoSize || "5";
 
-  if (!audioUnlocked) {
-    return (
-      <div className="min-h-screen min-h-[100dvh] bg-primary flex flex-col items-center justify-center" style={{ ...bgStyle, ...fontStyle }}>
-        <button
-          onClick={unlockAudio}
-          className="px-12 py-8 bg-white/20 hover:bg-white/30 rounded-2xl transition-colors cursor-pointer border-2 border-white/40"
-        >
-          <p className="text-[clamp(2rem,5vw,5rem)] font-bold text-primary-foreground" style={textStyle}>
-            🔊
-          </p>
-          <p className="text-[clamp(1rem,2vw,2rem)] font-semibold text-primary-foreground mt-4" style={textStyle}>
-            Toque para ativar o áudio
-          </p>
-        </button>
-      </div>
-    );
-  }
-
   return (
-    <div className="min-h-screen min-h-[100dvh] flex flex-col relative" style={{ backgroundColor: bgStyle.backgroundColor || '#1e3a5f', ...fontStyle }}>
+    <div className="min-h-screen min-h-[100dvh] flex flex-col relative bg-primary" style={{ ...bgStyle, ...fontStyle }}>
       {/* Botão voltar discreto */}
       <a href="/" className="absolute top-2 left-2 z-50 opacity-30 hover:opacity-100 transition-opacity p-2">
         <svg xmlns="http://www.w3.org/2000/svg" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" className="text-primary-foreground"><path d="m15 18-6-6 6-6"/></svg>
