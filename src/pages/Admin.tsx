@@ -58,6 +58,7 @@ const NAV_ITEMS: NavItem[] = [
   { id: "services", label: "Tipos de Serviço", icon: <FileText className="h-4 w-4" />, adminOnly: true },
   { id: "priority", label: "Prioridade", icon: <ShieldAlert className="h-4 w-4" />, adminOnly: true },
   { id: "users", label: "Usuários", icon: <Users className="h-4 w-4" />, adminOnly: true },
+  { id: "permissions", label: "Permissões", icon: <ShieldCheck className="h-4 w-4" />, adminOnly: true },
   { id: "totem", label: "Config. Totem", icon: <Tablet className="h-4 w-4" />, adminOnly: true },
   { id: "screens", label: "Aparência das Telas", icon: <Palette className="h-4 w-4" />, adminOnly: true },
   { id: "printer", label: "Impressão & Layout", icon: <Printer className="h-4 w-4" />, adminOnly: true },
