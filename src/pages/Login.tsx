@@ -179,41 +179,6 @@ const Login = () => {
     );
   }
 
-  // First user registration (no admin exists yet)
-  if (!hasAdmin) {
-    return (
-      <div className="min-h-screen bg-background flex items-center justify-center p-6">
-        <Card className="w-full max-w-sm">
-        <CardHeader className="text-center">
-            <img src="/logo.png" alt="UniTechBR" className="h-16 mx-auto mb-2 object-contain" />
-            <CardTitle>Configuração Inicial</CardTitle>
-            <CardDescription>Crie o primeiro administrador do sistema</CardDescription>
-          </CardHeader>
-          <CardContent>
-            <form onSubmit={handleSetup} className="space-y-4">
-              <div>
-                <Label>Nome completo</Label>
-                <Input value={fullName} onChange={(e) => setFullName(e.target.value)} placeholder="Administrador" required />
-              </div>
-              <div>
-                <Label>Email</Label>
-                <Input type="email" value={email} onChange={(e) => setEmail(e.target.value)} placeholder="admin@clinica.com" required />
-              </div>
-              <div>
-                <Label>Senha</Label>
-                <Input type="password" value={password} onChange={(e) => setPassword(e.target.value)} placeholder="Mínimo 6 caracteres" required />
-              </div>
-              <Button type="submit" disabled={loading} className="w-full">
-                {loading ? "Criando..." : "Criar Administrador"}
-              </Button>
-            </form>
-          </CardContent>
-        </Card>
-    </div>
-    );
-  }
-
-  return (
     <div className="min-h-screen bg-background flex items-center justify-center p-6 relative">
       <Link to="/" className="absolute top-4 left-4">
         <Button variant="ghost" size="sm"><ArrowLeft className="h-4 w-4 mr-1" /> Início</Button>
