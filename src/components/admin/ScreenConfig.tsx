@@ -12,7 +12,7 @@ import { toast } from "sonner";
 import { type ScreenConfig, defaultScreenConfig, loadScreenConfig } from "@/lib/screen-config";
 
 const FONT_OPTIONS = [
-  { value: "", label: "Padrão do Sistema" },
+  { value: "default", label: "Padrão do Sistema" },
   { value: "'Inter', sans-serif", label: "Inter" },
   { value: "'Roboto', sans-serif", label: "Roboto" },
   { value: "'Open Sans', sans-serif", label: "Open Sans" },
@@ -135,7 +135,7 @@ export function ScreenConfigPanel() {
                 </div>
                 <div>
                   <Label className="text-xs">Fonte</Label>
-                  <Select value={config.totemFontFamily} onValueChange={(v) => update("totemFontFamily", v)}>
+                  <Select value={config.totemFontFamily || "default"} onValueChange={(v) => update("totemFontFamily", v === "default" ? "" : v)}>
                     <SelectTrigger className="h-8 text-sm"><SelectValue placeholder="Padrão" /></SelectTrigger>
                     <SelectContent>{FONT_OPTIONS.map(f => <SelectItem key={f.value} value={f.value}>{f.label}</SelectItem>)}</SelectContent>
                   </Select>
@@ -190,7 +190,7 @@ export function ScreenConfigPanel() {
               <div className="grid grid-cols-2 gap-3">
                 <div>
                   <Label className="text-xs">Fonte</Label>
-                  <Select value={config.panelFontFamily} onValueChange={(v) => update("panelFontFamily", v)}>
+                  <Select value={config.panelFontFamily || "default"} onValueChange={(v) => update("panelFontFamily", v === "default" ? "" : v)}>
                     <SelectTrigger className="h-8 text-sm"><SelectValue placeholder="Padrão" /></SelectTrigger>
                     <SelectContent>{FONT_OPTIONS.map(f => <SelectItem key={f.value} value={f.value}>{f.label}</SelectItem>)}</SelectContent>
                   </Select>
@@ -243,7 +243,7 @@ export function ScreenConfigPanel() {
               <div className="grid grid-cols-2 gap-3">
                 <div>
                   <Label className="text-xs">Fonte</Label>
-                  <Select value={config.counterFontFamily} onValueChange={(v) => update("counterFontFamily", v)}>
+                  <Select value={config.counterFontFamily || "default"} onValueChange={(v) => update("counterFontFamily", v === "default" ? "" : v)}>
                     <SelectTrigger className="h-8 text-sm"><SelectValue placeholder="Padrão" /></SelectTrigger>
                     <SelectContent>{FONT_OPTIONS.map(f => <SelectItem key={f.value} value={f.value}>{f.label}</SelectItem>)}</SelectContent>
                   </Select>
