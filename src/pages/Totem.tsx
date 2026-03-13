@@ -8,6 +8,7 @@ import { printTicket } from "@/lib/print-service";
 import { supabase } from "@/integrations/supabase/client";
 import type { ServiceType, Ticket } from "@/lib/ticket-service";
 import { Printer, User, FileText, Heart, ArrowLeft } from "lucide-react";
+import { isAndroid } from "@/lib/native-print";
 import { useScreenConfig } from "@/hooks/use-screen-config";
 import { useKioskMode } from "@/lib/kiosk-mode";
 import { useNavigate } from "react-router-dom";
@@ -47,13 +48,16 @@ const Totem = () => {
       if (data) setTotemConfig(data as unknown as TotemConfig);
     });
 
-    const localConfig = getLocalPrinterConfig();
-    if (localConfig.paired) {
-      autoConnectWebUsbPrinter(localConfig.vendorId, localConfig.productId)
-        .then((connected) => {
-          if (connected) console.log("[Totem] WebUSB printer auto-connected");
-          else console.warn("[Totem] WebUSB printer not found");
-        });
+    // Only try WebUSB auto-connect on non-Android platforms
+    if (!isAndroid()) {
+      const localConfig = getLocalPrinterConfig();
+      if (localConfig.paired) {
+        autoConnectWebUsbPrinter(localConfig.vendorId, localConfig.productId)
+          .then((connected) => {
+            if (connected) console.log("[Totem] WebUSB printer auto-connected");
+            else console.warn("[Totem] WebUSB printer not found");
+          });
+      }
     }
 
     const channel = supabase
@@ -146,7 +150,7 @@ const Totem = () => {
     if (longPressTimer.current) { clearTimeout(longPressTimer.current); longPressTimer.current = null; }
   };
 
-  const printerPaired = isLocalPrinterPaired();
+  const printerPaired = isAndroid() || isLocalPrinterPaired();
 
   return (
     <div className="min-h-screen min-h-[100dvh] bg-primary flex flex-col items-center justify-center p-[3vw]" style={{ ...bgStyle, ...fontStyle }}>
