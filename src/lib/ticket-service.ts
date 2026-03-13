@@ -244,11 +244,13 @@ export async function getWaitingTickets() {
 }
 
 export async function getCalledTickets() {
+  const today = new Date().toISOString().split("T")[0];
   const { data, error } = await supabase
     .from("tickets")
     .select("*, service_types(*), counters!tickets_counter_id_fkey(*)")
     .in("status", ["called", "in_service", "completed", "no_show"])
     .not("called_at", "is", null)
+    .gte("created_at", `${today}T00:00:00`)
     .order("called_at", { ascending: false })
     .limit(10);
   if (error) throw error;
@@ -326,12 +328,13 @@ export async function resetAllTicketsComplete() {
   // Reset all counters' current ticket
   await supabase.from("counters").update({ current_ticket_id: null }).neq("id", "00000000-0000-0000-0000-000000000000");
 
-  // Cancel ALL tickets from today (waiting, called, in_service)
+  // Cancel ALL tickets from today (waiting, called, in_service, completed, no_show)
+  // This clears them from "recent calls" but they remain in reports
   await supabase
     .from("tickets")
     .update({ status: "cancelled", completed_at: new Date().toISOString() })
     .gte("created_at", `${today}T00:00:00`)
-    .in("status", ["waiting", "called", "in_service"]);
+    .in("status", ["waiting", "called", "in_service", "completed", "no_show"]);
 
   // Reset daily sequence to 0
   await supabase
