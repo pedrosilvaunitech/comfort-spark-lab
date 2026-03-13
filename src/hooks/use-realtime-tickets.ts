@@ -9,7 +9,6 @@ export function useRealtimeTickets() {
   const [counters, setCounters] = useState<any[]>([]);
   const [lastCalled, setLastCalled] = useState<any | null>(null);
   
-  // Track ALL announced ticket keys to detect new ones
   const announcedKeysRef = useRef<Set<string>>(new Set());
   const pendingAnnouncementsRef = useRef<any[]>([]);
   const isProcessingRef = useRef(false);
@@ -21,9 +20,6 @@ export function useRealtimeTickets() {
     if (!next) return;
     isProcessingRef.current = true;
     setLastCalled({ ...next, _announceKey: `${next.id}_${next.called_at}` });
-    // The Panel will pick up lastCalled change and enqueue speech.
-    // We wait a short time then allow next announcement to be set.
-    // The actual speech queue in Panel handles the real timing.
     setTimeout(() => {
       isProcessingRef.current = false;
       processNextAnnouncement();
@@ -46,7 +42,6 @@ export function useRealtimeTickets() {
     setCounters(ctrs);
 
     if (!initialLoadDoneRef.current) {
-      // On first load, mark all existing as already announced (don't replay)
       called.forEach((t: any) => {
         announcedKeysRef.current.add(`${t.id}_${t.called_at}`);
       });
@@ -54,7 +49,6 @@ export function useRealtimeTickets() {
       return;
     }
 
-    // Find ALL tickets that haven't been announced yet
     const newCalls: any[] = [];
     for (const ticket of called) {
       const key = `${ticket.id}_${ticket.called_at}`;
@@ -64,7 +58,6 @@ export function useRealtimeTickets() {
       }
     }
 
-    // Sort by called_at ascending (oldest first)
     newCalls.sort((a: any, b: any) => 
       new Date(a.called_at).getTime() - new Date(b.called_at).getTime()
     );
@@ -78,14 +71,13 @@ export function useRealtimeTickets() {
   useEffect(() => {
     refresh();
 
+    // Subscribe to BOTH tickets and counters for full realtime
     const ticketChannel = supabase
       .channel("tickets-realtime")
       .on(
         "postgres_changes",
         { event: "*", schema: "public", table: "tickets" },
-        () => {
-          refresh();
-        }
+        () => refresh()
       )
       .subscribe();
 
@@ -98,9 +90,13 @@ export function useRealtimeTickets() {
       )
       .subscribe();
 
+    // Fallback polling every 8s for resilience
+    const pollInterval = setInterval(() => refresh(), 8000);
+
     return () => {
       supabase.removeChannel(ticketChannel);
       supabase.removeChannel(counterChannel);
+      clearInterval(pollInterval);
     };
   }, [refresh]);
 

@@ -1,4 +1,4 @@
-import { useState, useEffect } from "react";
+import { useState, useEffect, useCallback } from "react";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
@@ -25,19 +25,31 @@ const CounterPage = () => {
   const { user, loading: authLoading, isOperator, signOut } = useAuth();
   const location = useLocation();
 
-  // Restore from: 1) route state, 2) localStorage, 3) empty
   const [selectedCounterId, setSelectedCounterId] = useState<string>(() => {
     const fromState = (location.state as any)?.counterId;
     if (fromState) return fromState;
     try { return localStorage.getItem(COUNTER_STORAGE_KEY) || ""; } catch { return ""; }
   });
 
-  const [currentTicket, setCurrentTicket] = useState<any>(null);
   const [loading, setLoading] = useState(false);
   const { counters, waitingTickets, calledTickets, refresh } = useRealtimeTickets();
   const { config: screenConfig } = useScreenConfig();
 
   const selectedCounter = counters.find((c: any) => c.id === selectedCounterId);
+
+  // Derive currentTicket reactively from realtime counter data
+  const currentTicket = (() => {
+    if (!selectedCounter) return null;
+    const counterTicket = selectedCounter?.tickets;
+    const ticket = Array.isArray(counterTicket) ? counterTicket[0] : counterTicket;
+    if (ticket && (ticket.status === "in_service" || ticket.status === "called")) return ticket;
+    if (selectedCounter.current_ticket_id) {
+      // Try to find ticket in calledTickets
+      const found = calledTickets.find((t: any) => t.id === selectedCounter.current_ticket_id);
+      if (found && (found.status === "in_service" || found.status === "called")) return found;
+    }
+    return null;
+  })();
 
   // Persist counter selection to localStorage
   useEffect(() => {
@@ -50,17 +62,6 @@ const CounterPage = () => {
     } catch {}
   }, [selectedCounterId]);
 
-  // Restore current ticket from counter data (realtime sync)
-  useEffect(() => {
-    const counterTicket = selectedCounter?.tickets;
-    const ticket = Array.isArray(counterTicket) ? counterTicket[0] : counterTicket;
-    if (ticket) {
-      setCurrentTicket(ticket);
-    } else if (selectedCounter && !selectedCounter.current_ticket_id) {
-      setCurrentTicket(null);
-    }
-  }, [selectedCounter, counters]);
-
   // Re-claim counter on load/reconnect (set operator_name)
   useEffect(() => {
     if (selectedCounterId && user) {
@@ -69,31 +70,6 @@ const CounterPage = () => {
         .eq("id", selectedCounterId);
     }
   }, [selectedCounterId, user]);
-
-  // Release counter on page unload (beforeunload)
-  useEffect(() => {
-    const handleBeforeUnload = () => {
-      if (selectedCounterId) {
-        const url = `${import.meta.env.VITE_SUPABASE_URL}/rest/v1/counters?id=eq.${selectedCounterId}`;
-        fetch(url, {
-          method: "PATCH",
-          headers: {
-            "Content-Type": "application/json",
-            "apikey": import.meta.env.VITE_SUPABASE_PUBLISHABLE_KEY,
-            "Authorization": `Bearer ${import.meta.env.VITE_SUPABASE_PUBLISHABLE_KEY}`,
-            "Prefer": "return=minimal",
-          },
-          body: JSON.stringify({ operator_name: null, current_ticket_id: null }),
-          keepalive: true,
-        });
-      }
-    };
-
-    window.addEventListener("beforeunload", handleBeforeUnload);
-    return () => {
-      window.removeEventListener("beforeunload", handleBeforeUnload);
-    };
-  }, [selectedCounterId]);
 
   const releaseCounter = async (counterId: string) => {
     await supabase.from("counters").update({ operator_name: null, current_ticket_id: null }).eq("id", counterId);
@@ -114,13 +90,11 @@ const CounterPage = () => {
 
       const ticket = await callNextTicket(selectedCounterId, user?.id);
       if (ticket) {
-        setCurrentTicket(ticket);
-        toast.success(`Senha ${ticket.display_number} chamada e atendimento iniciado!`);
+        toast.success(`Senha ${ticket.display_number} chamada!`);
       } else {
         toast.info("Nenhuma senha na fila");
-        setCurrentTicket(null);
       }
-      refresh();
+      // No need for manual refresh - realtime handles it
     } catch (err: any) { toast.error(err.message); }
     finally { setLoading(false); }
   };
@@ -129,13 +103,14 @@ const CounterPage = () => {
     if (!selectedCounterId) { toast.error("Selecione um guichê primeiro"); return; }
     setLoading(true);
     try {
-      const { data: counter } = await supabase.from("counters").select("*").eq("id", selectedCounterId).single();
-      if (!counter) throw new Error("Guichê não encontrado");
-      if (counter.current_ticket_id) {
+      // Complete current ticket first if exists
+      if (currentTicket && currentTicket.id) {
         await supabase.from("tickets")
           .update({ status: "completed", completed_at: new Date().toISOString() })
-          .eq("id", counter.current_ticket_id);
+          .eq("id", currentTicket.id)
+          .in("status", ["called", "in_service"]);
       }
+
       const { data: updatedTicket, error } = await supabase.from("tickets")
         .update({
           status: "in_service",
@@ -148,23 +123,29 @@ const CounterPage = () => {
         .single();
       if (error) throw error;
       await supabase.from("counters").update({ current_ticket_id: ticketId }).eq("id", selectedCounterId);
-      setCurrentTicket(updatedTicket);
       toast.success(`Senha ${updatedTicket.display_number} chamada!`);
-      refresh();
     } catch (err: any) { toast.error(err.message); }
     finally { setLoading(false); }
   };
 
   const handleComplete = async () => {
     if (!currentTicket || !selectedCounterId) return;
-    try { await completeTicket(currentTicket.id, selectedCounterId); setCurrentTicket(null); toast.success("Atendimento finalizado"); refresh(); }
-    catch (err: any) { toast.error(err.message); }
+    setLoading(true);
+    try {
+      await completeTicket(currentTicket.id, selectedCounterId);
+      toast.success("Atendimento finalizado");
+    } catch (err: any) { toast.error(err.message); }
+    finally { setLoading(false); }
   };
 
   const handleNoShow = async () => {
     if (!currentTicket || !selectedCounterId) return;
-    try { await markNoShow(currentTicket.id, selectedCounterId); setCurrentTicket(null); toast.info("Paciente não compareceu"); refresh(); }
-    catch (err: any) { toast.error(err.message); }
+    setLoading(true);
+    try {
+      await markNoShow(currentTicket.id, selectedCounterId);
+      toast.info("Paciente não compareceu");
+    } catch (err: any) { toast.error(err.message); }
+    finally { setLoading(false); }
   };
 
   const handleReprint = async () => {
@@ -178,7 +159,6 @@ const CounterPage = () => {
     try {
       await supabase.from("tickets").update({ called_at: new Date().toISOString() }).eq("id", currentTicket.id);
       toast.success(`Senha ${currentTicket.display_number} rechamada!`);
-      refresh();
     } catch { toast.error("Erro ao rechamar"); }
   };
 
@@ -194,7 +174,6 @@ const CounterPage = () => {
   if (!user) return <Navigate to="/login" />;
   if (!isOperator) return <div className="min-h-screen flex items-center justify-center"><p className="text-destructive">Sem permissão</p></div>;
 
-  // Custom styles from config
   const pageBgStyle = screenConfig.counterBgColor ? { backgroundColor: screenConfig.counterBgColor } : {};
   const pageTextStyle = screenConfig.counterTextColor ? { color: screenConfig.counterTextColor } : {};
   const headerBgStyle = screenConfig.counterHeaderBgColor ? { backgroundColor: screenConfig.counterHeaderBgColor } : {};
@@ -253,8 +232,8 @@ const CounterPage = () => {
                     {currentTicket.patient_name && <p className="mt-2 text-muted-foreground">{currentTicket.patient_name}</p>}
                   </div>
                   <div className="grid grid-cols-2 gap-2">
-                    <Button onClick={handleComplete} style={btnStyle}><CheckCircle className="h-4 w-4 mr-2" /> Finalizar</Button>
-                    <Button onClick={handleNoShow} variant="destructive"><XCircle className="h-4 w-4 mr-2" /> Não Compareceu</Button>
+                    <Button onClick={handleComplete} disabled={loading} style={btnStyle}><CheckCircle className="h-4 w-4 mr-2" /> Finalizar</Button>
+                    <Button onClick={handleNoShow} disabled={loading} variant="destructive"><XCircle className="h-4 w-4 mr-2" /> Não Compareceu</Button>
                     <Button onClick={handleRecall} variant="secondary" className="col-span-2"><Volume2 className="h-4 w-4 mr-2" /> Rechamar</Button>
                     <Button onClick={handleReprint} variant="outline" className="col-span-2"><Printer className="h-4 w-4 mr-2" /> Reimprimir</Button>
                   </div>
@@ -295,7 +274,7 @@ const CounterPage = () => {
                     <div className="flex items-center gap-3">
                       <span className="font-bold text-foreground">{t.display_number}</span>
                       <Badge variant="outline" className="text-xs">
-                        {t.status === "in_service" ? "Atendendo" : "Chamado"}
+                        {t.status === "in_service" ? "Atendendo" : t.status === "completed" ? "Finalizado" : t.status === "no_show" ? "Não compareceu" : "Chamado"}
                       </Badge>
                     </div>
                     <span className="text-xs text-muted-foreground">{t.counters?.name || "—"}</span>
