@@ -172,11 +172,6 @@ const Totem = () => {
         <p className="text-[clamp(0.9rem,2vw,1.5rem)] text-primary-foreground/80" style={textStyle ? { ...textStyle, opacity: 0.8, ...fontStyle } : fontStyle}>
           {screenConfig.totemSubtitle || "Toque para retirar sua senha"}
         </p>
-        {!printerPaired && (
-          <p className="text-[clamp(0.6rem,1.2vw,0.85rem)] text-primary-foreground/60 mt-[1vh] animate-pulse">
-            ⚠️ Impressora não configurada — segure o título por 3s para configurar
-          </p>
-        )}
       </div>
 
       {step === "select_type" && (
