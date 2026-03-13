@@ -102,7 +102,6 @@ const Panel = () => {
   const { calledTickets, lastCalled } = useRealtimeTickets();
   const lastCalledKeyRef = useRef<string | null>(null);
   const [voicesLoaded, setVoicesLoaded] = useState(false);
-  const [audioUnlocked, setAudioUnlocked] = useState(false);
   const voiceSettingsRef = useRef<VoiceSettings>(defaultVoiceSettings);
   const { config: screenConfig } = useScreenConfig();
 
