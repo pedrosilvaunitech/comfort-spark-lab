@@ -18,10 +18,26 @@ export function isAndroid(): boolean {
 }
 
 /**
- * Check if WebUSB API is available (Chrome on Android/Desktop)
+ * Check if WebUSB API is available and usable
  */
+export function getWebUsbBlockReason(): string | null {
+  if (!("usb" in navigator)) {
+    return "WebUSB não está disponível neste navegador. Use Google Chrome.";
+  }
+
+  if (!window.isSecureContext) {
+    return "WebUSB exige HTTPS (ou localhost).";
+  }
+
+  if (window.top !== window.self) {
+    return "WebUSB não funciona dentro de iframe/preview. Abra o sistema em aba/janela própria.";
+  }
+
+  return null;
+}
+
 export function hasWebUsb(): boolean {
-  return 'usb' in navigator;
+  return getWebUsbBlockReason() === null;
 }
 
 // Cache the WebUSB device so we don't re-prompt every print
@@ -303,6 +319,11 @@ export async function autoConnectWebUsbPrinter(vendorId?: number, productId?: nu
  * Pair the WebUSB printer (MUST be called from user gesture like button click)
  */
 export async function pairWebUsbPrinter(): Promise<{ success: boolean; deviceName?: string; vendorId?: number; productId?: number }> {
+  const blockReason = getWebUsbBlockReason();
+  if (blockReason) {
+    throw new Error(blockReason);
+  }
+
   const usb = getNavigatorUsb();
   if (!usb) {
     throw new Error('WebUSB não disponível neste navegador. Use o Google Chrome (desktop ou Android).');
@@ -344,7 +365,7 @@ export async function pairWebUsbPrinter(): Promise<{ success: boolean; deviceNam
       throw new Error('Nenhuma impressora selecionada. Selecione o dispositivo na janela do navegador.');
     }
     if (err.name === 'SecurityError') {
-      throw new Error('WebUSB bloqueado pelo navegador. Verifique se o nginx inclui o header: Permissions-Policy: usb=(self)');
+      throw new Error(getWebUsbBlockReason() || 'WebUSB bloqueado por política do navegador. Verifique HTTPS e Permissions-Policy: usb=(self).');
     }
     throw new Error(err.message || 'Erro ao parear impressora USB.');
   }

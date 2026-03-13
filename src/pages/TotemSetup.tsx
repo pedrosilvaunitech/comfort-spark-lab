@@ -15,7 +15,7 @@ import {
   clearLocalPrinterConfig,
   type LocalPrinterConfig,
 } from "@/lib/local-printer-config";
-import { hasWebUsb, pairWebUsbPrinter, isWebUsbPrinterConnected, isAndroid, UsbPrinter } from "@/lib/native-print";
+import { hasWebUsb, getWebUsbBlockReason, pairWebUsbPrinter, isWebUsbPrinterConnected, isAndroid, UsbPrinter } from "@/lib/native-print";
 
 type PrintMode = "android_usb" | "webusb" | "network" | "browser";
 
@@ -24,6 +24,7 @@ const TotemSetup = () => {
   const [config, setConfig] = useState<LocalPrinterConfig>(getLocalPrinterConfig());
   const [connectionStatus, setConnectionStatus] = useState<"checking" | "connected" | "disconnected">("checking");
   const [webUsbSupported, setWebUsbSupported] = useState(false);
+  const [webUsbReason, setWebUsbReason] = useState<string | null>(null);
   const [printMode, setPrintMode] = useState<PrintMode>(() => {
     const stored = localStorage.getItem("unitech_print_mode") as PrintMode;
     if (stored) return stored;
@@ -34,13 +35,17 @@ const TotemSetup = () => {
   const [networkPort, setNetworkPort] = useState(() => localStorage.getItem("unitech_printer_port") || "9100");
 
   useEffect(() => {
-    const supported = hasWebUsb();
+    const reason = getWebUsbBlockReason();
+    const supported = !reason;
+    setWebUsbReason(reason);
     setWebUsbSupported(supported);
+
     if (!supported && printMode === "webusb") {
       setPrintMode("network");
       localStorage.setItem("unitech_print_mode", "network");
     }
-    if (printMode === "webusb") {
+
+    if (printMode === "webusb" && supported) {
       checkConnection();
     } else {
       setConnectionStatus("disconnected");
@@ -378,7 +383,7 @@ const TotemSetup = () => {
             <CardContent className="space-y-4">
               {!webUsbSupported && (
                 <div className="p-3 rounded-lg bg-destructive/10 text-destructive text-sm">
-                  ⚠️ WebUSB não suportado. Use Chrome no Android ou desktop, fora de iframes.
+                  ⚠️ {webUsbReason || "WebUSB não suportado. Use Chrome em HTTPS e fora de iframes."}
                 </div>
               )}
 
