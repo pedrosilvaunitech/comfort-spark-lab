@@ -319,6 +319,11 @@ export async function autoConnectWebUsbPrinter(vendorId?: number, productId?: nu
  * Pair the WebUSB printer (MUST be called from user gesture like button click)
  */
 export async function pairWebUsbPrinter(): Promise<{ success: boolean; deviceName?: string; vendorId?: number; productId?: number }> {
+  const blockReason = getWebUsbBlockReason();
+  if (blockReason) {
+    throw new Error(blockReason);
+  }
+
   const usb = getNavigatorUsb();
   if (!usb) {
     throw new Error('WebUSB não disponível neste navegador. Use o Google Chrome (desktop ou Android).');
@@ -360,7 +365,7 @@ export async function pairWebUsbPrinter(): Promise<{ success: boolean; deviceNam
       throw new Error('Nenhuma impressora selecionada. Selecione o dispositivo na janela do navegador.');
     }
     if (err.name === 'SecurityError') {
-      throw new Error('WebUSB bloqueado pelo navegador. Verifique se o nginx inclui o header: Permissions-Policy: usb=(self)');
+      throw new Error(getWebUsbBlockReason() || 'WebUSB bloqueado por política do navegador. Verifique HTTPS e Permissions-Policy: usb=(self).');
     }
     throw new Error(err.message || 'Erro ao parear impressora USB.');
   }
