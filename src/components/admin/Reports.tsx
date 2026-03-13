@@ -49,6 +49,7 @@ export function Reports() {
   const [dateTo, setDateTo] = useState<Date>(new Date());
   const [reportView, setReportView] = useState<ReportView>("overview");
   const [selectedOperator, setSelectedOperator] = useState<string>("all");
+  const allTicketsRef = useRef<any[]>([]);
 
   // Auto-load on mount + auto-refresh every 15s
   useEffect(() => {
