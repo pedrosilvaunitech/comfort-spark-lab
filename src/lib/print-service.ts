@@ -380,7 +380,8 @@ export async function printTicket(
         ? "network_ip"
         : null;
 
-  const hasAndroidLocalMode = isAndroid() && localPreferredMethod === "android_usb";
+  const isAndroidPlatform = isAndroid();
+  const hasAndroidLocalMode = isAndroidPlatform;
   const hasWebUsbLocal = localPaired && webUsbAvailable;
   const hasLocalPrinter = hasWebUsbLocal || hasAndroidLocalMode;
 
@@ -415,14 +416,14 @@ export async function printTicket(
   console.log("[Print] Server printer config:", { enabled: config?.enabled, connectionType: config?.connectionType });
 
   // Respect local per-device modes even when global printing is disabled
-  if (!config?.enabled && !hasLocalPrinter && localPreferredMethod !== "network_ip") {
+  if (!config?.enabled && !hasLocalPrinter && localPreferredMethod !== "network_ip" && !isAndroidPlatform) {
     console.log("[Print] Printing disabled (config.enabled=false, no local mode active)");
     return { success: true, method: "disabled" };
   }
 
   const defaultMethod =
     localPreferredMethod ||
-    (isAndroid() ? "android_usb" : webUsbAvailable ? "webusb" : (config?.connectionType === "network" ? "network_ip" : "browser"));
+    (isAndroidPlatform ? "android_usb" : webUsbAvailable ? "webusb" : (config?.connectionType === "network" ? "network_ip" : "browser"));
   const method = preferredMethod || defaultMethod;
 
   // Build fallback chain

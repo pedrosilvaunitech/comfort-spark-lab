@@ -14,7 +14,7 @@ const Index = () => {
     {
       title: "Painel de Chamadas",
       description: "TV/Monitor que exibe as senhas chamadas",
-      path: "/panel",
+      path: "/oanel",
       icon: <Monitor className="h-10 w-10" />,
     },
     {
