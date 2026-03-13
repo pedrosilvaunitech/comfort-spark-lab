@@ -294,6 +294,55 @@ const TotemSetup = () => {
           </CardContent>
         </Card>
 
+        {/* Android USB Config */}
+        {printMode === "android_usb" && (
+          <Card>
+            <CardHeader>
+              <CardTitle className="flex items-center gap-2">
+                <Usb className="h-5 w-5" />
+                Impressora USB (Android)
+              </CardTitle>
+              <CardDescription>A impressora USB será detectada automaticamente</CardDescription>
+            </CardHeader>
+            <CardContent className="space-y-4">
+              <p className="text-sm text-muted-foreground">
+                Conecte a impressora térmica via cabo USB/OTG. O sistema detecta e conecta automaticamente.
+              </p>
+              <Button
+                onClick={async () => {
+                  try {
+                    const status = await UsbPrinter.isConnected();
+                    if (status.connected) {
+                      toast.success(`Impressora conectada: ${status.deviceName || "USB"}`);
+                    } else {
+                      const devices = await UsbPrinter.listDevices();
+                      if (devices.devices.length > 0) {
+                        const p = devices.devices[0];
+                        const r = await UsbPrinter.connect({ vendorId: p.vendorId, productId: p.productId });
+                        if (r.success) toast.success(`Conectado a: ${p.name}`);
+                        else toast.error("Falha ao conectar");
+                      } else {
+                        toast.error("Nenhuma impressora USB encontrada");
+                      }
+                    }
+                  } catch (err: any) {
+                    toast.error(err.message || "Erro ao verificar impressora");
+                  }
+                }}
+                variant="outline"
+                className="w-full gap-2"
+              >
+                <RefreshCw className="h-4 w-4" />
+                Verificar Conexão
+              </Button>
+              <Button onClick={handleTestPrint} variant="outline" className="w-full gap-2">
+                <Printer className="h-4 w-4" />
+                Impressão Teste
+              </Button>
+            </CardContent>
+          </Card>
+        )}
+
         {/* WebUSB Config */}
         {printMode === "webusb" && (
           <Card>
