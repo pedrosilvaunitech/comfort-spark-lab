@@ -1,9 +1,8 @@
 {
   "appId": "app.lovable.comfortsparklab",
-  "appName": "comfort-spark-lab",
+  "appName": "Sistema de Senhas",
   "webDir": "dist",
   "server": {
-    "url": "https://7b1c5817-2b51-459d-8337-d4f4e33dcb33.lovableproject.com?forceHideBadge=true",
     "cleartext": true
   },
   "plugins": {
