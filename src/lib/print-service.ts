@@ -174,6 +174,7 @@ export async function printViaPrintServer(ticket: Ticket, serverUrl?: string): P
         printName: localConfig.printName ?? config.printName ?? true,
         printCpf: localConfig.printCpf ?? config.printCpf ?? false,
         allowUsbFallback: true,
+        rotate180: config.rotate180 ?? false,
       },
     };
 
