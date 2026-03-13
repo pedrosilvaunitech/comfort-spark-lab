@@ -20,10 +20,11 @@ export interface VoiceSettings {
   repeatCount: number;
   voiceName: string;
   numberFormat: "full" | "no_zeros" | "digit_by_digit";
-  // e.g. "full" = "0001", "no_zeros" = "1", "digit_by_digit" = "0 0 0 1"
   prefixFormat: "senha" | "numero" | "senha_numero" | "custom";
   customPrefix: string;
   speakPrefix: boolean;
+  /** Delay in seconds between consecutive announcements */
+  delayBetween: number;
 }
 
 export const defaultVoiceSettings: VoiceSettings = {
