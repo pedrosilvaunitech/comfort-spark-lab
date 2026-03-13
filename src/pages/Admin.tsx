@@ -41,7 +41,7 @@ import { cn } from "@/lib/utils";
 
 type AdminSection =
   | "queue" | "counters" | "services" | "priority" | "users"
-  | "totem" | "screens" | "printer" | "layout" | "voice"
+  | "totem" | "screens" | "printer" | "voice"
   | "reports" | "logs";
 
 interface NavItem {
