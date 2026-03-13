@@ -6,8 +6,8 @@ import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { toast } from "sonner";
-import { LogIn, Shield, Loader2 } from "lucide-react";
-import { useNavigate } from "react-router-dom";
+import { LogIn, Shield, Loader2, ArrowLeft } from "lucide-react";
+import { useNavigate, Link } from "react-router-dom";
 
 const Login = () => {
   const [email, setEmail] = useState("");
@@ -193,12 +193,15 @@ const Login = () => {
             </form>
           </CardContent>
         </Card>
-      </div>
+    </div>
     );
   }
 
   return (
-    <div className="min-h-screen bg-background flex items-center justify-center p-6">
+    <div className="min-h-screen bg-background flex items-center justify-center p-6 relative">
+      <Link to="/" className="absolute top-4 left-4">
+        <Button variant="ghost" size="sm"><ArrowLeft className="h-4 w-4 mr-1" /> Início</Button>
+      </Link>
       <Card className="w-full max-w-sm">
         <CardHeader className="text-center">
           <CardTitle className="flex items-center justify-center gap-2">

@@ -211,7 +211,12 @@ const Admin = () => {
         )}>
           {sidebarOpen ? (
             <>
-              <div className="grid grid-cols-3 gap-1">
+              <div className="grid grid-cols-4 gap-1">
+                <Link to="/">
+                  <Button variant="ghost" size="sm" className="w-full text-sidebar-foreground/70 hover:bg-sidebar-accent text-xs h-8">
+                    <Home className="h-3 w-3 mr-1" /> Início
+                  </Button>
+                </Link>
                 <Link to="/totem">
                   <Button variant="ghost" size="sm" className="w-full text-sidebar-foreground/70 hover:bg-sidebar-accent text-xs h-8">
                     <Tablet className="h-3 w-3 mr-1" /> Totem
