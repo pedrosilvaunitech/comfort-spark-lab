@@ -245,14 +245,17 @@ export async function getWaitingTickets() {
 
 export async function getCalledTickets() {
   const today = new Date().toISOString().split("T")[0];
+  const dayStart = `${today}T00:00:00`;
+
   const { data, error } = await supabase
     .from("tickets")
     .select("*, service_types(*), counters!tickets_counter_id_fkey(*)")
     .in("status", ["called", "in_service", "completed", "no_show"])
     .not("called_at", "is", null)
-    .gte("created_at", `${today}T00:00:00`)
+    .gte("called_at", dayStart)
     .order("called_at", { ascending: false })
     .limit(10);
+
   if (error) throw error;
   return data;
 }
