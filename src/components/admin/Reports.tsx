@@ -152,6 +152,14 @@ export function Reports() {
       const { data: profiles } = await supabase.from("profiles").select("*");
       const profileMap = new Map((profiles || []).map((p) => [p.id, p]));
 
+      // Enrich tickets with operator name for exports
+      all.forEach((t: any) => {
+        if (t.operator_id && profileMap.has(t.operator_id)) {
+          t.operator_name = profileMap.get(t.operator_id)?.full_name || "Desconhecido";
+        }
+      });
+      allTicketsRef.current = all;
+
       // Group by operator with detailed metrics
       const opMap = new Map<string, {
         name: string; total: number; completed: number; noShow: number;
