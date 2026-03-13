@@ -82,6 +82,7 @@ export function generateEscPosBytes(
     printName?: boolean;
     printCpf?: boolean;
     paperSize?: string;
+    rotate180?: boolean;
   }
 ): Uint8Array {
   const encoder = new TextEncoder();
