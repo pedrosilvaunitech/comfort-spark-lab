@@ -364,6 +364,7 @@ export async function printViaNetworkIp(ticket: Ticket): Promise<boolean> {
         paperSize: localConfig.paperSize ?? config?.paperSize ?? "80mm",
         printName: localConfig.printName ?? config?.printName ?? true,
         printCpf: localConfig.printCpf ?? config?.printCpf ?? true,
+        rotate180: config?.rotate180 ?? false,
       },
     };
 
