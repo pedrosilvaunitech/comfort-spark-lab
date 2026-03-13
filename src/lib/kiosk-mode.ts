@@ -34,6 +34,14 @@ export function useKioskMode() {
       document.documentElement.requestFullscreen().catch(() => {});
     }
 
+    // Lock to landscape orientation
+    try {
+      const screenAny = screen as any;
+      if (screenAny.orientation?.lock) {
+        screenAny.orientation.lock('landscape').catch(() => {});
+      }
+    } catch {}
+
     return () => {
       document.removeEventListener('backbutton', handleBackButton, true);
     };
