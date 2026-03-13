@@ -58,8 +58,9 @@ export async function generateTicket(
     .single();
 
   const prefix = serviceType?.prefix || "N";
-  const displayNumber = `${prefix}${String(nextNumber).padStart(4, "0")}`;
-  const ticketNumber = `${today}-${displayNumber}`;
+  const numStr = String(nextNumber).padStart(4, "0");
+  const displayNumber = `${prefix} ${numStr}`;
+  const ticketNumber = `${today}-${prefix}${numStr}`;
 
   const { data, error } = await supabase
     .from("tickets")
