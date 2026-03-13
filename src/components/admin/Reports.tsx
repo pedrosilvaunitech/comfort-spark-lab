@@ -346,7 +346,36 @@ export function Reports() {
           <RefreshCw className={`h-4 w-4 ${loading ? "animate-spin" : ""}`} />
         </Button>
 
-        <span className="text-sm text-muted-foreground ml-auto">{periodLabel}</span>
+        <div className="flex gap-1 ml-auto">
+          <Button
+            onClick={() => {
+              try {
+                exportToExcel({
+                  tickets: allTicketsRef.current, stats, operatorStats, serviceStats,
+                  hourlyStats, avgWaitTime, avgServiceTime, dateFrom, dateTo, periodLabel,
+                });
+                toast.success("Excel exportado!");
+              } catch { toast.error("Erro ao exportar Excel"); }
+            }}
+            variant="outline" size="sm" disabled={stats.total === 0}
+          >
+            <FileSpreadsheet className="h-4 w-4 mr-1" /> Excel
+          </Button>
+          <Button
+            onClick={() => {
+              try {
+                exportToPDF({
+                  tickets: allTicketsRef.current, stats, operatorStats, serviceStats,
+                  hourlyStats, avgWaitTime, avgServiceTime, dateFrom, dateTo, periodLabel,
+                });
+                toast.success("PDF exportado!");
+              } catch { toast.error("Erro ao exportar PDF"); }
+            }}
+            variant="outline" size="sm" disabled={stats.total === 0}
+          >
+            <FileDown className="h-4 w-4 mr-1" /> PDF
+          </Button>
+        </div>
       </div>
 
       {/* View Tabs */}
