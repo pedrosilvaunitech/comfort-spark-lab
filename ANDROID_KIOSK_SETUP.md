@@ -54,7 +54,7 @@ Edite `android/app/src/main/AndroidManifest.xml`:
 <activity
     ...
     android:theme="@style/AppTheme.NoActionBar"
-    android:screenOrientation="portrait"
+    android:screenOrientation="landscape"
     android:immersive="true"
     android:keepScreenOn="true">
     
