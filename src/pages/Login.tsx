@@ -193,9 +193,15 @@ const Login = () => {
             </form>
           </CardContent>
         </Card>
-      </div>
+    </div>
     );
   }
+
+  return (
+    <div className="min-h-screen bg-background flex items-center justify-center p-6">
+      <Link to="/" className="absolute top-4 left-4">
+        <Button variant="ghost" size="sm"><ArrowLeft className="h-4 w-4 mr-1" /> Início</Button>
+      </Link>
 
   return (
     <div className="min-h-screen bg-background flex items-center justify-center p-6">
