@@ -305,7 +305,7 @@ export async function autoConnectWebUsbPrinter(vendorId?: number, productId?: nu
 export async function pairWebUsbPrinter(): Promise<{ success: boolean; deviceName?: string; vendorId?: number; productId?: number }> {
   const usb = getNavigatorUsb();
   if (!usb) {
-    throw new Error('WebUSB não disponível neste navegador. Use o Chrome (desktop ou Android) fora de iframes.');
+    throw new Error('WebUSB não disponível neste navegador. Use o Google Chrome (desktop ou Android).');
   }
 
   try {
