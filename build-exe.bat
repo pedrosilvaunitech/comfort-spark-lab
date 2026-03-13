@@ -45,6 +45,13 @@ echo [4/4] Gerando .EXE...
 set CSC_IDENTITY_AUTO_DISCOVERY=false
 set WIN_CSC_LINK=
 set CSC_LINK=
+
+:: Limpar cache corrompido do winCodeSign (erro de symlink)
+if exist "%LOCALAPPDATA%\electron-builder\Cache\winCodeSign" (
+    echo Limpando cache winCodeSign...
+    rmdir /s /q "%LOCALAPPDATA%\electron-builder\Cache\winCodeSign"
+)
+
 call npm run build
 if %ERRORLEVEL% neq 0 (
     echo [ERRO] Falha ao gerar .EXE
