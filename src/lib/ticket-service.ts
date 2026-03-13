@@ -99,19 +99,29 @@ export async function callNextTicket(counterId: string): Promise<Ticket | null> 
   let nextTicket: Ticket | null = null;
   const priorityTypes: ("normal" | "priority" | "preferential")[] = ["priority"];
   if (priority?.includePreferential !== false) priorityTypes.push("preferential");
+  const priorityServiceTypeIds: string[] = (priority as any)?.priorityServiceTypeIds || [];
 
   const shouldCallPriority = await determinePriority(priority);
 
   if (shouldCallPriority) {
-    // Try to get a priority/preferential ticket first
-    const { data } = await supabase
+    // Try ticket_type based priority first
+    let query = supabase
       .from("tickets")
       .select("*")
       .eq("status", "waiting")
-      .in("ticket_type", priorityTypes)
       .order("created_at", { ascending: true })
-      .limit(1)
-      .single();
+      .limit(1);
+
+    if (priorityServiceTypeIds.length > 0) {
+      // Priority by ticket_type OR by selected service categories
+      query = query.or(
+        `ticket_type.in.(${priorityTypes.join(",")}),service_type_id.in.(${priorityServiceTypeIds.join(",")})`
+      );
+    } else {
+      query = query.in("ticket_type", priorityTypes);
+    }
+
+    const { data } = await query.single();
     nextTicket = data;
   }
 
