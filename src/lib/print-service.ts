@@ -332,11 +332,11 @@ export async function printViaNetworkIp(ticket: Ticket): Promise<boolean> {
       },
     };
 
-    // Try multiple print server endpoints
+    // Try print server endpoints (local print-server.mjs on port 3002)
     const endpoints = [
-      `http://${config.ip}:${config.port || 9100}`, // Direct to printer (some printers accept HTTP)
-      `http://localhost:3001/print`, // Local print server
-      `http://${window.location.hostname}:3001/print`, // Same host print server
+      `http://localhost:3002/print`,
+      `http://${window.location.hostname}:3002/print`,
+      `http://localhost:3001/print`, // Legacy fallback
     ];
 
     for (const url of endpoints) {
