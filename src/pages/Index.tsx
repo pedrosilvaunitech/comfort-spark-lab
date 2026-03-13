@@ -1,7 +1,7 @@
 import { Link } from "react-router-dom";
 import { Card, CardContent } from "@/components/ui/card";
 import { Monitor, Printer, Settings, Users } from "lucide-react";
-import logo from "@/assets/logo.png";
+import logo from "@/assets/logo-unisistemas.png";
 
 const Index = () => {
   const pages = [
