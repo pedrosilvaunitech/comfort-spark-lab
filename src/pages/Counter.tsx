@@ -184,7 +184,7 @@ const CounterPage = () => {
             <h1 className="text-xl font-bold text-card-foreground" style={{ ...headerTextStyle, ...fontStyle }}>{screenConfig.counterTitle || "Painel do Guichê"}</h1>
           </div>
           <div className="flex gap-2 items-center">
-            <span className="text-sm text-muted-foreground" style={pageTextStyle}>{user.user_metadata?.full_name || user.email}</span>
+            <Link to="/"><Button variant="outline" size="sm">Início</Button></Link>
             <Link to="/panel"><Button variant="outline" size="sm">Painel</Button></Link>
             <Link to="/admin"><Button variant="outline" size="sm">Admin</Button></Link>
             <Button variant="ghost" size="sm" onClick={async () => { if (selectedCounterId) await releaseCounter(selectedCounterId); signOut(); }}><LogOut className="h-4 w-4" /></Button>
