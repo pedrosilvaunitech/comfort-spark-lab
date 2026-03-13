@@ -140,7 +140,7 @@ export async function printViaPrintServer(ticket: Ticket, serverUrl?: string): P
     const config = printerConfig as unknown as PrintConfig;
     const layout = layoutConfig as unknown as TicketLayout;
 
-    const url = serverUrl || "http://localhost:3001/print";
+    const url = serverUrl || `http://${window.location.hostname}:3002/print`;
 
     const payload = {
       ticket: {
@@ -334,9 +334,8 @@ export async function printViaNetworkIp(ticket: Ticket): Promise<boolean> {
 
     // Try print server endpoints (local print-server.mjs on port 3002)
     const endpoints = [
-      `http://localhost:3002/print`,
       `http://${window.location.hostname}:3002/print`,
-      `http://localhost:3001/print`, // Legacy fallback
+      `http://localhost:3002/print`,
     ];
 
     for (const url of endpoints) {
