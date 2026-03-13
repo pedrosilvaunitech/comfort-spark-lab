@@ -79,7 +79,7 @@ export async function generateTicket(
   return data;
 }
 
-export async function callNextTicket(counterId: string): Promise<Ticket | null> {
+export async function callNextTicket(counterId: string, operatorId?: string): Promise<Ticket | null> {
   const { data: counter } = await supabase.from("counters").select("*").eq("id", counterId).single();
   if (!counter) throw new Error("Guichê não encontrado");
 
