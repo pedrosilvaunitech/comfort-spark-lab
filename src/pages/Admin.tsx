@@ -319,7 +319,7 @@ const Admin = () => {
                       <p className="font-semibold text-foreground">Configuração da Impressora (por dispositivo)</p>
                       <p className="text-sm text-muted-foreground">A conexão USB ou Rede é configurada em cada dispositivo/totem individualmente.</p>
                     </div>
-                    <Link to="/totem-setup">
+                    <Link to="/totem/setup">
                       <Button variant="outline" className="gap-2">
                         <ExternalLink className="h-4 w-4" />
                         Abrir Config. do Totem

@@ -163,8 +163,8 @@ const TotemSetup = () => {
         };
 
         const endpoints = [
-          `http://localhost:3001/print`,
-          `http://${window.location.hostname}:3001/print`,
+          `http://localhost:3002/print`,
+          `http://${window.location.hostname}:3002/print`,
         ];
 
         let printed = false;
@@ -267,6 +267,12 @@ const TotemSetup = () => {
                 </div>
                 {printMode === "android_usb" && <Check className="h-4 w-4 text-primary" />}
               </div>
+            )}
+
+            {isAndroid() && (
+              <p className="text-xs text-muted-foreground px-1">
+                No APK Android, use <strong>USB Nativo (Android)</strong>. O modo WebUSB é exclusivo do navegador Chrome.
+              </p>
             )}
 
             {!isAndroid() && (
@@ -461,7 +467,7 @@ const TotemSetup = () => {
                 </Button>
               </div>
               <p className="text-xs text-muted-foreground">
-                Requer um print server rodando localmente (porta 3001) para enviar dados à impressora via TCP.
+                Requer um print server rodando localmente (porta 3002) para enviar dados à impressora via TCP.
               </p>
             </CardContent>
           </Card>
