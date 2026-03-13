@@ -40,8 +40,11 @@ if %ERRORLEVEL% neq 0 (
     exit /b 1
 )
 
-:: 4. Build .exe
+:: 4. Build .exe (sem code signing para evitar erro de symlink)
 echo [4/4] Gerando .EXE...
+set CSC_IDENTITY_AUTO_DISCOVERY=false
+set WIN_CSC_LINK=
+set CSC_LINK=
 call npm run build
 if %ERRORLEVEL% neq 0 (
     echo [ERRO] Falha ao gerar .EXE
