@@ -78,6 +78,7 @@ const Admin = () => {
     usbVendorId: "", usbProductId: "", serialPort: "COM1", serialBaudrate: 9600,
     autoCut: true, printLogo: false, printQrCode: true, printCpf: true,
     printName: true, printMode: "detailed", paperSize: "80mm",
+    printFont: "monospace", rotate180: false,
   });
   const [layoutConfig, setLayoutConfig] = useState<TicketLayout>({
     clinicName: "Clínica Exemplo", header: "Bem-vindo!", footer: "Aguarde ser chamado no painel",
