@@ -98,6 +98,11 @@ export function generateEscPosBytes(
   // Initialize printer
   pushBytes(ESC, 0x40);
 
+  // Enable 180° rotation if configured
+  if (config.rotate180) {
+    pushBytes(ESC, 0x7B, 0x01);
+  }
+
   // Center align
   pushBytes(ESC, 0x61, 0x01);
 
