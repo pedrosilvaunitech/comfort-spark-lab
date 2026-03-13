@@ -198,13 +198,10 @@ const Login = () => {
   }
 
   return (
-    <div className="min-h-screen bg-background flex items-center justify-center p-6">
+    <div className="min-h-screen bg-background flex items-center justify-center p-6 relative">
       <Link to="/" className="absolute top-4 left-4">
         <Button variant="ghost" size="sm"><ArrowLeft className="h-4 w-4 mr-1" /> Início</Button>
       </Link>
-
-  return (
-    <div className="min-h-screen bg-background flex items-center justify-center p-6">
       <Card className="w-full max-w-sm">
         <CardHeader className="text-center">
           <CardTitle className="flex items-center justify-center gap-2">
