@@ -6,7 +6,7 @@ import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { toast } from "sonner";
-import { LogIn, Shield, Loader2, ArrowLeft } from "lucide-react";
+import { LogIn, Loader2, ArrowLeft } from "lucide-react";
 import { useNavigate, Link } from "react-router-dom";
 
 const Login = () => {
@@ -18,6 +18,7 @@ const Login = () => {
   const [loading, setLoading] = useState(false);
   const [checking, setChecking] = useState(true);
   const [hasAdmin, setHasAdmin] = useState(true);
+  const [showSetup, setShowSetup] = useState(false);
   const [step, setStep] = useState<"credentials" | "counter">("credentials");
   const [userRoles, setUserRoles] = useState<string[]>([]);
   const [loggedUser, setLoggedUser] = useState<any>(null);
@@ -30,16 +31,20 @@ const Login = () => {
         // First try RPC
         const { data, error } = await supabase.rpc("admin_exists");
         if (!error && data !== null && data !== undefined) {
-          setHasAdmin(!!data);
+          const adminFound = !!data;
+          setHasAdmin(adminFound);
+          if (adminFound) setShowSetup(false);
         } else {
-          // Fallback: directly query user_roles table
+          // Fallback: directly query user_roles table (works when logged in)
           const { data: rolesData, error: rolesError } = await supabase
             .from("user_roles")
             .select("id")
             .eq("role", "admin")
             .limit(1);
           if (!rolesError) {
-            setHasAdmin((rolesData?.length ?? 0) > 0);
+            const adminFound = (rolesData?.length ?? 0) > 0;
+            setHasAdmin(adminFound);
+            if (adminFound) setShowSetup(false);
           }
         }
       } catch {
@@ -174,40 +179,6 @@ const Login = () => {
     );
   }
 
-  // First user registration (no admin exists yet)
-  if (!hasAdmin) {
-    return (
-      <div className="min-h-screen bg-background flex items-center justify-center p-6">
-        <Card className="w-full max-w-sm">
-        <CardHeader className="text-center">
-            <img src="/logo.png" alt="UniTechBR" className="h-16 mx-auto mb-2 object-contain" />
-            <CardTitle>Configuração Inicial</CardTitle>
-            <CardDescription>Crie o primeiro administrador do sistema</CardDescription>
-          </CardHeader>
-          <CardContent>
-            <form onSubmit={handleSetup} className="space-y-4">
-              <div>
-                <Label>Nome completo</Label>
-                <Input value={fullName} onChange={(e) => setFullName(e.target.value)} placeholder="Administrador" required />
-              </div>
-              <div>
-                <Label>Email</Label>
-                <Input type="email" value={email} onChange={(e) => setEmail(e.target.value)} placeholder="admin@clinica.com" required />
-              </div>
-              <div>
-                <Label>Senha</Label>
-                <Input type="password" value={password} onChange={(e) => setPassword(e.target.value)} placeholder="Mínimo 6 caracteres" required />
-              </div>
-              <Button type="submit" disabled={loading} className="w-full">
-                {loading ? "Criando..." : "Criar Administrador"}
-              </Button>
-            </form>
-          </CardContent>
-        </Card>
-    </div>
-    );
-  }
-
   return (
     <div className="min-h-screen bg-background flex items-center justify-center p-6 relative">
       <Link to="/" className="absolute top-4 left-4">
@@ -217,24 +188,61 @@ const Login = () => {
         <CardHeader className="text-center">
           <CardTitle className="flex items-center justify-center gap-2">
             <LogIn className="h-5 w-5" />
-            {step === "credentials" ? "Login" : "Selecione o Guichê"}
+            {step === "credentials"
+              ? showSetup && !hasAdmin
+                ? "Configuração Inicial"
+                : "Login"
+              : "Selecione o Guichê"}
           </CardTitle>
+          {step === "credentials" && !hasAdmin && (
+            <CardDescription>Não há administrador detectado. Você pode criar o primeiro admin.</CardDescription>
+          )}
         </CardHeader>
         <CardContent>
           {step === "credentials" ? (
-            <form onSubmit={handleLogin} className="space-y-4">
-              <div>
-                <Label htmlFor="email">Email</Label>
-                <Input id="email" type="email" value={email} onChange={(e) => setEmail(e.target.value)} required />
+            showSetup && !hasAdmin ? (
+              <form onSubmit={handleSetup} className="space-y-4">
+                <div>
+                  <Label>Nome completo</Label>
+                  <Input value={fullName} onChange={(e) => setFullName(e.target.value)} placeholder="Administrador" required />
+                </div>
+                <div>
+                  <Label>Email</Label>
+                  <Input type="email" value={email} onChange={(e) => setEmail(e.target.value)} placeholder="admin@clinica.com" required />
+                </div>
+                <div>
+                  <Label>Senha</Label>
+                  <Input type="password" value={password} onChange={(e) => setPassword(e.target.value)} placeholder="Mínimo 6 caracteres" required />
+                </div>
+                <Button type="submit" disabled={loading} className="w-full">
+                  {loading ? "Criando..." : "Criar Administrador"}
+                </Button>
+                <Button type="button" variant="outline" className="w-full" onClick={() => setShowSetup(false)}>
+                  Voltar para login
+                </Button>
+              </form>
+            ) : (
+              <div className="space-y-4">
+                <form onSubmit={handleLogin} className="space-y-4">
+                  <div>
+                    <Label htmlFor="email">Email</Label>
+                    <Input id="email" type="email" value={email} onChange={(e) => setEmail(e.target.value)} required />
+                  </div>
+                  <div>
+                    <Label htmlFor="password">Senha</Label>
+                    <Input id="password" type="password" value={password} onChange={(e) => setPassword(e.target.value)} required />
+                  </div>
+                  <Button type="submit" disabled={loading} className="w-full">
+                    {loading ? "Entrando..." : "Entrar"}
+                  </Button>
+                </form>
+                {!hasAdmin && (
+                  <Button type="button" variant="outline" className="w-full" onClick={() => setShowSetup(true)}>
+                    Criar primeiro administrador
+                  </Button>
+                )}
               </div>
-              <div>
-                <Label htmlFor="password">Senha</Label>
-                <Input id="password" type="password" value={password} onChange={(e) => setPassword(e.target.value)} required />
-              </div>
-              <Button type="submit" disabled={loading} className="w-full">
-                {loading ? "Entrando..." : "Entrar"}
-              </Button>
-            </form>
+            )
           ) : (
             <div className="space-y-4">
               <p className="text-sm text-muted-foreground text-center">
