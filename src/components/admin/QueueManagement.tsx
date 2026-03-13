@@ -1,5 +1,6 @@
 import { useState, useEffect, useCallback } from "react";
 import { supabase } from "@/integrations/supabase/client";
+import { useAuth } from "@/hooks/use-auth";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
@@ -11,6 +12,7 @@ import { RefreshCw, PhoneCall, Clock, CheckCircle, Activity } from "lucide-react
 import { toast } from "sonner";
 
 export function QueueManagement() {
+  const { user } = useAuth();
   const [waitingTickets, setWaitingTickets] = useState<any[]>([]);
   const [calledTickets, setCalledTickets] = useState<any[]>([]);
   const [inServiceTickets, setInServiceTickets] = useState<any[]>([]);
@@ -79,6 +81,7 @@ export function QueueManagement() {
           status: "called" as any,
           called_at: new Date().toISOString(),
           custom_voice_text: customVoiceText || null,
+          operator_id: user?.id || null,
         } as any)
         .eq("id", selectedTicket.id);
 
