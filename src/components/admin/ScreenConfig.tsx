@@ -151,6 +151,14 @@ export function ScreenConfigPanel() {
                   <Switch checked={config.totemShowLogo} onCheckedChange={(v) => update("totemShowLogo", v)} />
                 </div>
               </div>
+              <Button variant="outline" size="sm" className="w-full mt-3" onClick={() => setConfig(prev => ({
+                ...prev,
+                totemTitle: defaultScreenConfig.totemTitle, totemSubtitle: defaultScreenConfig.totemSubtitle,
+                totemBgColor: "", totemTextColor: "", totemButtonBgColor: "", totemButtonTextColor: "",
+                totemButtonRadius: "12", totemFontFamily: "", totemLogoSize: "8", totemShowLogo: true,
+              }))}>
+                <RotateCcw className="h-3 w-3 mr-1" /> Restaurar Padrão do Totem
+              </Button>
             </CardContent>
           </Card>
         </TabsContent>
