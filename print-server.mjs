@@ -124,6 +124,72 @@ function sendToPrinter(ip, port, data) {
   });
 }
 
+async function sendToUsbDevice(data, explicitDevicePath) {
+  const candidates = [
+    explicitDevicePath,
+    process.env.PRINT_SERVER_USB_DEVICE,
+    "/dev/usb/lp0",
+    "/dev/usb/lp1",
+    "/dev/lp0",
+  ].filter(Boolean);
+
+  for (const devicePath of candidates) {
+    try {
+      await fs.access(devicePath);
+      await fs.writeFile(devicePath, data);
+      return { method: "usb_device", target: devicePath };
+    } catch {
+      // try next candidate
+    }
+  }
+
+  throw new Error("Nenhum device USB de impressora encontrado (/dev/usb/lp0, /dev/usb/lp1, /dev/lp0)");
+}
+
+function sendToCupsRaw(data, printerName) {
+  return new Promise((resolve, reject) => {
+    const args = [];
+    if (printerName) {
+      args.push("-d", printerName);
+    }
+    args.push("-o", "raw", "-");
+
+    const lp = spawn("lp", args, { stdio: ["pipe", "pipe", "pipe"] });
+    let stderr = "";
+
+    lp.stderr.on("data", (chunk) => {
+      stderr += chunk.toString();
+    });
+
+    lp.on("error", (err) => {
+      reject(new Error(`Falha ao executar lp: ${err.message}`));
+    });
+
+    lp.on("close", (code) => {
+      if (code === 0) {
+        resolve({ method: "cups", target: printerName || "default" });
+      } else {
+        reject(new Error(stderr || `lp finalizou com código ${code}`));
+      }
+    });
+
+    lp.stdin.write(data);
+    lp.stdin.end();
+  });
+}
+
+async function sendToLocalUsbPrinter(data, printer = {}) {
+  try {
+    return await sendToUsbDevice(data, printer.devicePath);
+  } catch (usbErr) {
+    try {
+      return await sendToCupsRaw(data, printer.printerName);
+    } catch (cupsErr) {
+      throw new Error(`USB direto falhou (${usbErr.message}) e CUPS falhou (${cupsErr.message})`);
+    }
+  }
+}
+
 // ── CORS headers ─────────────────────────────────────────────────
 function corsHeaders() {
   return {
