@@ -306,12 +306,19 @@ export async function printViaNetworkIp(ticket: Ticket): Promise<boolean> {
     const config = printerConfig as unknown as PrintConfig;
     const layout = layoutConfig as unknown as TicketLayout;
 
-    if (!config?.ip) {
-      await logPrint(ticket.id, "failed", "network_ip", "IP da impressora não configurado");
+    // Use local device IP first, then global config
+    const localIp = typeof window !== "undefined" ? localStorage.getItem("unitech_printer_ip") : null;
+    const localPort = typeof window !== "undefined" ? localStorage.getItem("unitech_printer_port") : null;
+    const localConfig = getLocalPrinterConfig();
+
+    const printerIp = localIp || config?.ip;
+    const printerPort = localPort ? parseInt(localPort) : (config?.port || 9100);
+
+    if (!printerIp) {
+      await logPrint(ticket.id, "failed", "network_ip", "IP da impressora não configurado (nem local nem global)");
       return false;
     }
 
-    // Try to send via local print server (which handles raw TCP to the printer)
     const payload = {
       ticket: {
         displayNumber: ticket.display_number,
@@ -320,17 +327,19 @@ export async function printViaNetworkIp(ticket: Ticket): Promise<boolean> {
         patientCpf: ticket.patient_cpf,
         createdAt: ticket.created_at,
       },
-      layout,
+      layout: layout || {},
       printer: {
         connectionType: "network",
-        ip: config.ip,
-        port: config.port || 9100,
-        autoCut: config.autoCut,
-        paperSize: config.paperSize,
-        printName: config.printName,
-        printCpf: config.printCpf,
+        ip: printerIp,
+        port: printerPort,
+        autoCut: localConfig.autoCut ?? config?.autoCut ?? true,
+        paperSize: localConfig.paperSize ?? config?.paperSize ?? "80mm",
+        printName: localConfig.printName ?? config?.printName ?? true,
+        printCpf: localConfig.printCpf ?? config?.printCpf ?? true,
       },
     };
+
+    console.log("[Print] Network IP payload:", { ip: printerIp, port: printerPort });
 
     // Try print server endpoints (local print-server.mjs on port 3002)
     const endpoints = [
@@ -350,20 +359,21 @@ export async function printViaNetworkIp(ticket: Ticket): Promise<boolean> {
           await logPrint(ticket.id, "success", "network_ip");
           return true;
         }
-      } catch {
-        // Try next endpoint
+        const errText = await response.text();
+        console.warn(`[Print] ${url} responded ${response.status}:`, errText);
+      } catch (fetchErr) {
+        console.warn(`[Print] ${url} failed:`, fetchErr);
         continue;
       }
     }
 
-    await logPrint(ticket.id, "failed", "network_ip", `Não foi possível conectar à impressora ${config.ip}:${config.port}`);
+    await logPrint(ticket.id, "failed", "network_ip", `Não foi possível conectar ao print server para ${printerIp}:${printerPort}`);
     return false;
   } catch (err: any) {
     await logPrint(ticket.id, "failed", "network_ip", err.message);
     return false;
   }
 }
-
 // ============ MAIN PRINT FUNCTION WITH FALLBACK ============
 export async function printTicket(
   ticket: Ticket,
