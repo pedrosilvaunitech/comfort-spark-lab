@@ -42,7 +42,14 @@ function textToBuffer(text) {
 }
 
 function buildEscPos(ticket, layout = {}, printer = {}) {
-  const buffers = [CMD.INIT, CMD.CENTER];
+  const buffers = [CMD.INIT];
+
+  // Enable 180° rotation if configured
+  if (printer.rotate180) {
+    buffers.push(CMD.ROTATE_ON);
+  }
+
+  buffers.push(CMD.CENTER);
 
   // Header / clinic name
   if (layout.clinicName) {
