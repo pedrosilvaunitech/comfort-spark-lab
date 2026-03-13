@@ -149,7 +149,7 @@ const Admin = () => {
 
       {/* Sidebar */}
       <aside className={cn(
-        "fixed lg:sticky top-0 left-0 z-50 h-screen flex flex-col transition-all duration-300 ease-in-out",
+        "fixed top-0 left-0 z-50 h-dvh flex flex-col transition-all duration-300 ease-in-out",
         "bg-sidebar text-sidebar-foreground border-r border-sidebar-border",
         sidebarOpen ? "w-64" : "w-16",
         mobileSidebarOpen ? "translate-x-0" : "-translate-x-full lg:translate-x-0"
