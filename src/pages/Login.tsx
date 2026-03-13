@@ -18,6 +18,7 @@ const Login = () => {
   const [loading, setLoading] = useState(false);
   const [checking, setChecking] = useState(true);
   const [hasAdmin, setHasAdmin] = useState(true);
+  const [showSetup, setShowSetup] = useState(false);
   const [step, setStep] = useState<"credentials" | "counter">("credentials");
   const [userRoles, setUserRoles] = useState<string[]>([]);
   const [loggedUser, setLoggedUser] = useState<any>(null);
