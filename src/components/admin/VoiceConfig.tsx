@@ -20,10 +20,11 @@ export interface VoiceSettings {
   repeatCount: number;
   voiceName: string;
   numberFormat: "full" | "no_zeros" | "digit_by_digit";
-  // e.g. "full" = "0001", "no_zeros" = "1", "digit_by_digit" = "0 0 0 1"
   prefixFormat: "senha" | "numero" | "senha_numero" | "custom";
   customPrefix: string;
   speakPrefix: boolean;
+  /** Delay in seconds between consecutive announcements */
+  delayBetween: number;
 }
 
 export const defaultVoiceSettings: VoiceSettings = {
@@ -37,6 +38,7 @@ export const defaultVoiceSettings: VoiceSettings = {
   prefixFormat: "senha",
   customPrefix: "",
   speakPrefix: true,
+  delayBetween: 2,
 };
 
 export function formatNumberForSpeech(displayNumber: string, settings: VoiceSettings): string {
@@ -350,6 +352,21 @@ export function VoiceConfig() {
               step={1}
               className="mt-2"
             />
+          </div>
+
+          <div>
+            <Label>Intervalo entre chamadas simultâneas: {settings.delayBetween ?? 2}s</Label>
+            <Slider
+              value={[settings.delayBetween ?? 2]}
+              onValueChange={([v]) => setSettings({ ...settings, delayBetween: v })}
+              min={0}
+              max={10}
+              step={0.5}
+              className="mt-2"
+            />
+            <p className="text-xs text-muted-foreground mt-1">
+              Tempo de espera entre o fim de uma chamada e o início da próxima quando há múltiplas senhas na fila
+            </p>
           </div>
 
           <Button onClick={handleSave} disabled={saving} className="w-full">
