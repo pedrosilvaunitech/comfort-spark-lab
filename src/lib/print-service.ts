@@ -400,6 +400,29 @@ export async function printTicket(
   ticket: Ticket,
   preferredMethod?: PrintMethod
 ): Promise<{ success: boolean; method: string }> {
+  const isAndroidPlatform = isAndroid();
+
+  // ANDROID: go straight to native USB — no config needed, no fallback to browser
+  if (isAndroidPlatform && !preferredMethod) {
+    console.log("[Print] Android detectado — impressão direta via USB nativo");
+    try {
+      const success = await printViaAndroidUsbMethod(ticket);
+      if (success) return { success: true, method: "android_usb" };
+      console.warn("[Print] Android USB falhou. Tentando print server...");
+      // Only fallback to print_server, never browser popup on Android
+      try {
+        const psFallback = await printViaPrintServer(ticket);
+        if (psFallback) return { success: true, method: "print_server" };
+      } catch { /* ignore */ }
+      await logPrint(ticket.id, "failed", "android_usb", "Impressora USB não respondeu");
+      return { success: false, method: "android_usb" };
+    } catch (err: any) {
+      console.error("[Print] Android USB error:", err);
+      await logPrint(ticket.id, "failed", "android_usb", err.message);
+      return { success: false, method: "android_usb" };
+    }
+  }
+
   // Check local device config first (totem-level config)
   const localPaired = isLocalPrinterPaired();
   const webUsbAvailable = hasWebUsb();
@@ -411,21 +434,10 @@ export async function printTicket(
         ? "network_ip"
         : null;
 
-  const isAndroidPlatform = isAndroid();
-  const hasAndroidLocalMode = isAndroidPlatform;
   const hasWebUsbLocal = localPaired && webUsbAvailable;
-  const hasLocalPrinter = hasWebUsbLocal || hasAndroidLocalMode;
+  const hasLocalPrinter = hasWebUsbLocal || isAndroidPlatform;
 
-  console.log("[Print] Starting print:", {
-    ticketId: ticket.id,
-    displayNumber: ticket.display_number,
-    localPaired,
-    webUsbAvailable,
-    localPreferredMethod,
-    hasAndroidLocalMode,
-    hasLocalPrinter,
-    preferredMethod,
-  });
+  console.log("[Print] Starting print:", { localPaired, webUsbAvailable, localPreferredMethod, hasLocalPrinter, preferredMethod });
 
   // If local WebUSB printer is paired, use it directly — NEVER fall back to browser popup
   if (hasWebUsbLocal && !preferredMethod) {

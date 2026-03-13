@@ -411,25 +411,57 @@ export async function printViaAndroidUsb(
     return false;
   }
 
+  // Known IRIS / PT80KM printer identifiers for auto-connect
+  const KNOWN_PRINTERS = [
+    { vendorId: 0x0483, productId: 0x7540 }, // PT80KM / IRIS (VID 1155, PID 30016)
+    { vendorId: 0x0483, productId: 0x5740 }, // IRIS variant
+    { vendorId: 0x0416, productId: 0x5011 }, // Winbond (some IRIS models)
+  ];
+
   try {
     const status = await UsbPrinter.isConnected();
 
     if (!status.connected) {
       const devices = await UsbPrinter.listDevices();
+      console.log('[NativePrint] Dispositivos USB encontrados:', JSON.stringify(devices.devices));
+
       if (devices.devices.length === 0) {
-        console.error('[NativePrint] No USB printers found');
-        return false;
-      }
+        // Try connecting directly with known VID/PID even if listDevices is empty
+        console.log('[NativePrint] Nenhum device listado. Tentando conectar direto VID=0x0483 PID=0x7540...');
+        try {
+          const directResult = await UsbPrinter.connect({ vendorId: 0x0483, productId: 0x7540 });
+          if (!directResult.success) {
+            console.error('[NativePrint] Conexão direta falhou');
+            return false;
+          }
+          console.log('[NativePrint] ✅ Conectado direto via VID/PID hardcoded');
+        } catch (directErr) {
+          console.error('[NativePrint] Erro conexão direta:', directErr);
+          return false;
+        }
+      } else {
+        // Try known printers first, then fall back to first device
+        let connected = false;
+        for (const known of KNOWN_PRINTERS) {
+          const match = devices.devices.find(
+            (d) => d.vendorId === known.vendorId && d.productId === known.productId
+          );
+          if (match) {
+            console.log(`[NativePrint] Impressora conhecida encontrada: ${match.name} (${match.vendorId}:${match.productId})`);
+            const r = await UsbPrinter.connect({ vendorId: match.vendorId, productId: match.productId });
+            if (r.success) { connected = true; break; }
+          }
+        }
 
-      const printer = devices.devices[0];
-      const connectResult = await UsbPrinter.connect({
-        vendorId: printer.vendorId,
-        productId: printer.productId,
-      });
-
-      if (!connectResult.success) {
-        console.error('[NativePrint] Failed to connect to printer');
-        return false;
+        if (!connected) {
+          const fallback = devices.devices[0];
+          console.log(`[NativePrint] Usando primeiro dispositivo: ${fallback.name} (${fallback.vendorId}:${fallback.productId})`);
+          const r = await UsbPrinter.connect({ vendorId: fallback.vendorId, productId: fallback.productId });
+          if (!r.success) {
+            console.error('[NativePrint] Falha ao conectar ao dispositivo');
+            return false;
+          }
+        }
       }
     }
 
@@ -437,6 +469,7 @@ export async function printViaAndroidUsb(
     const base64Data = bytesToBase64(bytes);
 
     const result = await UsbPrinter.print({ data: base64Data });
+    console.log('[NativePrint] Resultado impressão:', result.success ? '✅ OK' : '❌ Falhou');
     return result.success;
   } catch (err) {
     console.error('[NativePrint] Error:', err);
