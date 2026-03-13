@@ -25,7 +25,10 @@ const TotemSetup = () => {
   const [connectionStatus, setConnectionStatus] = useState<"checking" | "connected" | "disconnected">("checking");
   const [webUsbSupported, setWebUsbSupported] = useState(false);
   const [printMode, setPrintMode] = useState<PrintMode>(() => {
-    return (localStorage.getItem("unitech_print_mode") as PrintMode) || "webusb";
+    const stored = localStorage.getItem("unitech_print_mode") as PrintMode;
+    if (stored) return stored;
+    if (isAndroid()) return "android_usb";
+    return "webusb";
   });
   const [networkIp, setNetworkIp] = useState(() => localStorage.getItem("unitech_printer_ip") || "");
   const [networkPort, setNetworkPort] = useState(() => localStorage.getItem("unitech_printer_port") || "9100");
