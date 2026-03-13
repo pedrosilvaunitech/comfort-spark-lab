@@ -57,7 +57,57 @@ function findVoice(settings: VoiceSettings): SpeechSynthesisVoice | null {
   return ptVoice || null;
 }
 
-async function speakTicket(displayNumber: string, counterName: string, settings: VoiceSettings) {
+// ============ SPEECH QUEUE (never cuts ongoing speech) ============
+type SpeechJob = {
+  text: string;
+  settings: VoiceSettings;
+};
+
+const speechQueue: SpeechJob[] = [];
+let isSpeaking = false;
+
+async function processSpeechQueue() {
+  if (isSpeaking) return;
+  const job = speechQueue.shift();
+  if (!job) return;
+
+  isSpeaking = true;
+  const { text, settings } = job;
+
+  try {
+    if (settings.beepEnabled) await playBeep();
+
+    for (let i = 0; i < settings.repeatCount; i++) {
+      await new Promise<void>((resolve) => {
+        const utterance = new SpeechSynthesisUtterance(text);
+        utterance.lang = "pt-BR";
+        utterance.rate = settings.rate;
+        utterance.pitch = settings.pitch;
+        const voice = findVoice(settings);
+        if (voice) utterance.voice = voice;
+        utterance.onend = () => resolve();
+        utterance.onerror = () => resolve();
+        speechSynthesis.speak(utterance);
+      });
+      if (i < settings.repeatCount - 1) {
+        await new Promise((r) => setTimeout(r, 1000));
+      }
+    }
+  } catch {
+    // ignore speech errors
+  } finally {
+    isSpeaking = false;
+    // Process next in queue
+    processSpeechQueue();
+  }
+}
+
+function enqueueSpeech(text: string, settings: VoiceSettings) {
+  speechQueue.push({ text, settings });
+  processSpeechQueue();
+}
+
+function buildSpeechText(displayNumber: string, counterName: string, settings: VoiceSettings): string {
   const spokenPrefix = formatPrefixForSpeech(settings);
   const spokenNumber = formatNumberForSpeech(displayNumber, settings);
   
@@ -70,32 +120,7 @@ async function speakTicket(displayNumber: string, counterName: string, settings:
     text = text.replace("{senha}", fullSpoken);
   }
   
-  text = text.replace("{guiche}", counterName).replace(/\s+/g, " ").trim();
-
-  speechSynthesis.cancel();
-  if (settings.beepEnabled) await playBeep();
-
-  const speak = () => {
-    const utterance = new SpeechSynthesisUtterance(text);
-    utterance.lang = "pt-BR";
-    utterance.rate = settings.rate;
-    utterance.pitch = settings.pitch;
-    const voice = findVoice(settings);
-    if (voice) utterance.voice = voice;
-    return utterance;
-  };
-
-  for (let i = 0; i < settings.repeatCount; i++) {
-    await new Promise<void>((resolve) => {
-      const u = speak();
-      u.onend = () => resolve();
-      u.onerror = () => resolve();
-      speechSynthesis.speak(u);
-    });
-    if (i < settings.repeatCount - 1) {
-      await new Promise((r) => setTimeout(r, 1000));
-    }
-  }
+  return text.replace("{guiche}", counterName).replace(/\s+/g, " ").trim();
 }
 
 const Panel = () => {
@@ -123,7 +148,6 @@ const Panel = () => {
     };
     window.addEventListener("click", unlock);
     window.addEventListener("touchstart", unlock);
-    // Also try immediately
     unlock();
     return () => {
       window.removeEventListener("click", unlock);
@@ -153,29 +177,13 @@ const Panel = () => {
       lastCalledKeyRef.current = calledKey;
       const counterName = (lastCalled as any).counters?.name || "guichê";
       const customText = (lastCalled as any).custom_voice_text;
+      const settings = voiceSettingsRef.current;
+
       if (customText && customText.trim().length > 0) {
-        speechSynthesis.cancel();
-        const settings = voiceSettingsRef.current;
-        const doSpeak = async () => {
-          if (settings.beepEnabled) await playBeep();
-          for (let i = 0; i < settings.repeatCount; i++) {
-            await new Promise<void>((resolve) => {
-              const u = new SpeechSynthesisUtterance(customText);
-              u.lang = "pt-BR";
-              u.rate = settings.rate;
-              u.pitch = settings.pitch;
-              const voice = findVoice(settings);
-              if (voice) u.voice = voice;
-              u.onend = () => resolve();
-              u.onerror = () => resolve();
-              speechSynthesis.speak(u);
-            });
-            if (i < settings.repeatCount - 1) await new Promise((r) => setTimeout(r, 1000));
-          }
-        };
-        doSpeak();
+        enqueueSpeech(customText, settings);
       } else {
-        speakTicket(lastCalled.display_number, counterName, voiceSettingsRef.current);
+        const text = buildSpeechText(lastCalled.display_number, counterName, settings);
+        enqueueSpeech(text, settings);
       }
     }
   }, [lastCalled, voicesLoaded]);
