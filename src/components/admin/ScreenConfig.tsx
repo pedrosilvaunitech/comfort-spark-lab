@@ -25,14 +25,48 @@ const FONT_OPTIONS = [
   { value: "monospace", label: "Monospace" },
 ];
 
-function ColorField({ label, value, onChange, placeholder }: { label: string; value: string; onChange: (v: string) => void; placeholder?: string }) {
+// Default visual colors to show in placeholder/color picker when field is empty
+const PLACEHOLDER_COLORS: Record<string, string> = {
+  totemBgColor: "#1e3a5f",
+  totemTextColor: "#ffffff",
+  totemButtonBgColor: "#ffffff",
+  totemButtonTextColor: "#1e3a5f",
+  panelBgColor: "#1e3a5f",
+  panelTextColor: "#ffffff",
+  panelTicketColor: "#facc15",
+  panelHeaderBgColor: "#0f172a",
+  panelFooterBgColor: "#000000",
+  panelFooterTextColor: "#ffffff",
+  counterBgColor: "#ffffff",
+  counterTextColor: "#1e293b",
+  counterHeaderBgColor: "#ffffff",
+  counterHeaderTextColor: "#1e293b",
+  counterButtonBgColor: "#2563eb",
+  counterButtonTextColor: "#ffffff",
+};
+
+function ColorField({ label, value, onChange, fieldKey }: { label: string; value: string; onChange: (v: string) => void; fieldKey?: string }) {
+  const placeholder = fieldKey ? PLACEHOLDER_COLORS[fieldKey] || "#000000" : "#000000";
   return (
     <div>
       <Label className="text-xs">{label}</Label>
       <div className="flex gap-2">
-        <Input value={value} onChange={(e) => onChange(e.target.value)} placeholder={placeholder || "#000000"} className="flex-1 h-8 text-xs" />
-        <input type="color" value={value || "#000000"} onChange={(e) => onChange(e.target.value)} className="h-8 w-8 rounded border cursor-pointer" />
+        <Input
+          value={value}
+          onChange={(e) => onChange(e.target.value)}
+          placeholder={placeholder}
+          className="flex-1 h-8 text-xs"
+        />
+        <input
+          type="color"
+          value={value || placeholder}
+          onChange={(e) => onChange(e.target.value)}
+          className="h-8 w-8 rounded border cursor-pointer"
+        />
       </div>
+      {!value && (
+        <p className="text-[10px] text-muted-foreground mt-0.5">Padrão: {placeholder}</p>
+      )}
     </div>
   );
 }
@@ -40,9 +74,13 @@ function ColorField({ label, value, onChange, placeholder }: { label: string; va
 export function ScreenConfigPanel() {
   const [config, setConfig] = useState<ScreenConfig>(defaultScreenConfig);
   const [saving, setSaving] = useState(false);
+  const [loaded, setLoaded] = useState(false);
 
   useEffect(() => {
-    loadScreenConfig().then(setConfig);
+    loadScreenConfig().then((c) => {
+      setConfig(c);
+      setLoaded(true);
+    });
   }, []);
 
   const handleSave = async () => {
@@ -65,6 +103,14 @@ export function ScreenConfigPanel() {
   };
 
   const update = (key: keyof ScreenConfig, value: any) => setConfig({ ...config, [key]: value });
+
+  if (!loaded) {
+    return (
+      <div className="flex items-center justify-center py-16">
+        <p className="text-muted-foreground">Carregando configurações...</p>
+      </div>
+    );
+  }
 
   return (
     <div className="space-y-6">
@@ -121,12 +167,12 @@ export function ScreenConfigPanel() {
                 </div>
               </div>
               <div className="grid grid-cols-2 gap-3">
-                <ColorField label="Cor de fundo" value={config.totemBgColor} onChange={(v) => update("totemBgColor", v)} placeholder="#1e3a5f" />
-                <ColorField label="Cor do texto" value={config.totemTextColor} onChange={(v) => update("totemTextColor", v)} placeholder="#ffffff" />
+                <ColorField label="Cor de fundo" value={config.totemBgColor} onChange={(v) => update("totemBgColor", v)} fieldKey="totemBgColor" />
+                <ColorField label="Cor do texto" value={config.totemTextColor} onChange={(v) => update("totemTextColor", v)} fieldKey="totemTextColor" />
               </div>
               <div className="grid grid-cols-2 gap-3">
-                <ColorField label="Cor do botão (fundo)" value={config.totemButtonBgColor} onChange={(v) => update("totemButtonBgColor", v)} placeholder="#ffffff" />
-                <ColorField label="Cor do botão (texto)" value={config.totemButtonTextColor} onChange={(v) => update("totemButtonTextColor", v)} placeholder="#000000" />
+                <ColorField label="Cor do botão (fundo)" value={config.totemButtonBgColor} onChange={(v) => update("totemButtonBgColor", v)} fieldKey="totemButtonBgColor" />
+                <ColorField label="Cor do botão (texto)" value={config.totemButtonTextColor} onChange={(v) => update("totemButtonTextColor", v)} fieldKey="totemButtonTextColor" />
               </div>
               <div className="grid grid-cols-2 gap-3">
                 <div>
@@ -151,6 +197,33 @@ export function ScreenConfigPanel() {
                   <Switch checked={config.totemShowLogo} onCheckedChange={(v) => update("totemShowLogo", v)} />
                 </div>
               </div>
+
+              {/* Live Preview */}
+              <div className="border-2 border-dashed border-border rounded-lg p-4 mt-4">
+                <p className="text-xs text-muted-foreground text-center mb-2">Pré-visualização</p>
+                <div
+                  className="rounded-lg p-6 text-center"
+                  style={{
+                    backgroundColor: config.totemBgColor || PLACEHOLDER_COLORS.totemBgColor,
+                    color: config.totemTextColor || PLACEHOLDER_COLORS.totemTextColor,
+                    fontFamily: config.totemFontFamily || undefined,
+                  }}
+                >
+                  <p className="text-lg font-bold">{config.totemTitle || "Sistema de Senhas"}</p>
+                  <p className="text-sm opacity-80">{config.totemSubtitle || "Toque para retirar sua senha"}</p>
+                  <div
+                    className="inline-block mt-3 px-6 py-2 font-bold text-sm"
+                    style={{
+                      backgroundColor: config.totemButtonBgColor || PLACEHOLDER_COLORS.totemButtonBgColor,
+                      color: config.totemButtonTextColor || PLACEHOLDER_COLORS.totemButtonTextColor,
+                      borderRadius: `${config.totemButtonRadius || 12}px`,
+                    }}
+                  >
+                    Exemplo Botão
+                  </div>
+                </div>
+              </div>
+
               <Button variant="outline" size="sm" className="w-full mt-3" onClick={() => setConfig(prev => ({
                 ...prev,
                 totemTitle: defaultScreenConfig.totemTitle, totemSubtitle: defaultScreenConfig.totemSubtitle,
@@ -176,16 +249,16 @@ export function ScreenConfigPanel() {
                 <Input value={config.panelTitle} onChange={(e) => update("panelTitle", e.target.value)} placeholder="Clínica Exemplo" className="h-8 text-sm" />
               </div>
               <div className="grid grid-cols-2 gap-3">
-                <ColorField label="Cor de fundo" value={config.panelBgColor} onChange={(v) => update("panelBgColor", v)} placeholder="#1e3a5f" />
-                <ColorField label="Cor do texto" value={config.panelTextColor} onChange={(v) => update("panelTextColor", v)} placeholder="#ffffff" />
+                <ColorField label="Cor de fundo" value={config.panelBgColor} onChange={(v) => update("panelBgColor", v)} fieldKey="panelBgColor" />
+                <ColorField label="Cor do texto" value={config.panelTextColor} onChange={(v) => update("panelTextColor", v)} fieldKey="panelTextColor" />
               </div>
               <div className="grid grid-cols-2 gap-3">
-                <ColorField label="Cor da senha chamada" value={config.panelTicketColor} onChange={(v) => update("panelTicketColor", v)} placeholder="#facc15" />
-                <ColorField label="Cor fundo cabeçalho" value={config.panelHeaderBgColor} onChange={(v) => update("panelHeaderBgColor", v)} placeholder="#000000" />
+                <ColorField label="Cor da senha chamada" value={config.panelTicketColor} onChange={(v) => update("panelTicketColor", v)} fieldKey="panelTicketColor" />
+                <ColorField label="Cor fundo cabeçalho" value={config.panelHeaderBgColor} onChange={(v) => update("panelHeaderBgColor", v)} fieldKey="panelHeaderBgColor" />
               </div>
               <div className="grid grid-cols-2 gap-3">
-                <ColorField label="Cor fundo rodapé" value={config.panelFooterBgColor} onChange={(v) => update("panelFooterBgColor", v)} placeholder="#000000" />
-                <ColorField label="Cor texto rodapé" value={config.panelFooterTextColor} onChange={(v) => update("panelFooterTextColor", v)} placeholder="#ffffff" />
+                <ColorField label="Cor fundo rodapé" value={config.panelFooterBgColor} onChange={(v) => update("panelFooterBgColor", v)} fieldKey="panelFooterBgColor" />
+                <ColorField label="Cor texto rodapé" value={config.panelFooterTextColor} onChange={(v) => update("panelFooterTextColor", v)} fieldKey="panelFooterTextColor" />
               </div>
               <div className="grid grid-cols-2 gap-3">
                 <div>
@@ -204,6 +277,29 @@ export function ScreenConfigPanel() {
                 <Label className="text-xs">Mostrar logo no painel</Label>
                 <Switch checked={config.panelShowLogo} onCheckedChange={(v) => update("panelShowLogo", v)} />
               </div>
+
+              {/* Live Preview */}
+              <div className="border-2 border-dashed border-border rounded-lg p-4 mt-4">
+                <p className="text-xs text-muted-foreground text-center mb-2">Pré-visualização</p>
+                <div
+                  className="rounded-lg overflow-hidden"
+                  style={{ backgroundColor: config.panelBgColor || PLACEHOLDER_COLORS.panelBgColor }}
+                >
+                  <div className="p-2 text-center" style={{ backgroundColor: config.panelHeaderBgColor || PLACEHOLDER_COLORS.panelHeaderBgColor }}>
+                    <p className="text-sm font-bold" style={{ color: config.panelTextColor || PLACEHOLDER_COLORS.panelTextColor }}>
+                      {config.panelTitle || "Painel de Chamadas"}
+                    </p>
+                  </div>
+                  <div className="p-6 text-center">
+                    <p className="text-3xl font-black" style={{ color: config.panelTicketColor || PLACEHOLDER_COLORS.panelTicketColor }}>N0001</p>
+                    <p className="text-sm mt-1" style={{ color: config.panelTextColor || PLACEHOLDER_COLORS.panelTextColor }}>Guichê 01</p>
+                  </div>
+                  <div className="p-2 text-center" style={{ backgroundColor: config.panelFooterBgColor || PLACEHOLDER_COLORS.panelFooterBgColor }}>
+                    <p className="text-xs" style={{ color: config.panelFooterTextColor || PLACEHOLDER_COLORS.panelFooterTextColor }}>Últimas chamadas</p>
+                  </div>
+                </div>
+              </div>
+
               <Button variant="outline" size="sm" className="w-full mt-3" onClick={() => setConfig(prev => ({
                 ...prev,
                 panelBgColor: "", panelTextColor: "", panelTicketColor: "", panelShowLogo: false,
@@ -229,16 +325,16 @@ export function ScreenConfigPanel() {
                 <Input value={config.counterTitle} onChange={(e) => update("counterTitle", e.target.value)} placeholder="Painel do Guichê" className="h-8 text-sm" />
               </div>
               <div className="grid grid-cols-2 gap-3">
-                <ColorField label="Cor de fundo" value={config.counterBgColor} onChange={(v) => update("counterBgColor", v)} placeholder="#ffffff" />
-                <ColorField label="Cor do texto" value={config.counterTextColor} onChange={(v) => update("counterTextColor", v)} placeholder="#000000" />
+                <ColorField label="Cor de fundo" value={config.counterBgColor} onChange={(v) => update("counterBgColor", v)} fieldKey="counterBgColor" />
+                <ColorField label="Cor do texto" value={config.counterTextColor} onChange={(v) => update("counterTextColor", v)} fieldKey="counterTextColor" />
               </div>
               <div className="grid grid-cols-2 gap-3">
-                <ColorField label="Cor fundo cabeçalho" value={config.counterHeaderBgColor} onChange={(v) => update("counterHeaderBgColor", v)} placeholder="#ffffff" />
-                <ColorField label="Cor texto cabeçalho" value={config.counterHeaderTextColor} onChange={(v) => update("counterHeaderTextColor", v)} placeholder="#000000" />
+                <ColorField label="Cor fundo cabeçalho" value={config.counterHeaderBgColor} onChange={(v) => update("counterHeaderBgColor", v)} fieldKey="counterHeaderBgColor" />
+                <ColorField label="Cor texto cabeçalho" value={config.counterHeaderTextColor} onChange={(v) => update("counterHeaderTextColor", v)} fieldKey="counterHeaderTextColor" />
               </div>
               <div className="grid grid-cols-2 gap-3">
-                <ColorField label="Cor do botão (fundo)" value={config.counterButtonBgColor} onChange={(v) => update("counterButtonBgColor", v)} placeholder="#2563eb" />
-                <ColorField label="Cor do botão (texto)" value={config.counterButtonTextColor} onChange={(v) => update("counterButtonTextColor", v)} placeholder="#ffffff" />
+                <ColorField label="Cor do botão (fundo)" value={config.counterButtonBgColor} onChange={(v) => update("counterButtonBgColor", v)} fieldKey="counterButtonBgColor" />
+                <ColorField label="Cor do botão (texto)" value={config.counterButtonTextColor} onChange={(v) => update("counterButtonTextColor", v)} fieldKey="counterButtonTextColor" />
               </div>
               <div className="grid grid-cols-2 gap-3">
                 <div>
@@ -253,6 +349,31 @@ export function ScreenConfigPanel() {
                   <Switch checked={config.counterShowLogo} onCheckedChange={(v) => update("counterShowLogo", v)} />
                 </div>
               </div>
+
+              {/* Live Preview */}
+              <div className="border-2 border-dashed border-border rounded-lg p-4 mt-4">
+                <p className="text-xs text-muted-foreground text-center mb-2">Pré-visualização</p>
+                <div className="rounded-lg overflow-hidden" style={{ backgroundColor: config.counterBgColor || PLACEHOLDER_COLORS.counterBgColor }}>
+                  <div className="p-2" style={{ backgroundColor: config.counterHeaderBgColor || PLACEHOLDER_COLORS.counterHeaderBgColor }}>
+                    <p className="text-sm font-bold" style={{ color: config.counterHeaderTextColor || PLACEHOLDER_COLORS.counterHeaderTextColor }}>
+                      {config.counterTitle || "Painel do Guichê"}
+                    </p>
+                  </div>
+                  <div className="p-4 text-center" style={{ color: config.counterTextColor || PLACEHOLDER_COLORS.counterTextColor }}>
+                    <p className="text-2xl font-black">N0001</p>
+                    <div
+                      className="inline-block mt-2 px-4 py-1 rounded text-xs font-bold"
+                      style={{
+                        backgroundColor: config.counterButtonBgColor || PLACEHOLDER_COLORS.counterButtonBgColor,
+                        color: config.counterButtonTextColor || PLACEHOLDER_COLORS.counterButtonTextColor,
+                      }}
+                    >
+                      Chamar Próxima
+                    </div>
+                  </div>
+                </div>
+              </div>
+
               <Button variant="outline" size="sm" className="w-full mt-3" onClick={() => setConfig(prev => ({
                 ...prev,
                 counterShowLogo: false, counterTitle: "Painel do Guichê",
