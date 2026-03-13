@@ -229,25 +229,47 @@ const server = http.createServer(async (req, res) => {
           return;
         }
 
-        const ip = printer?.ip;
-        const port = printer?.port || 9100;
+        const escPosData = buildEscPos(ticket, layout || {}, printer || {});
+        const connectionType = printer?.connectionType || (printer?.ip ? "network" : "usb");
 
-        if (!ip) {
-          res.writeHead(400, { ...corsHeaders(), "Content-Type": "application/json" });
-          res.end(JSON.stringify({ error: "printer.ip obrigatório" }));
-          return;
+        if (connectionType === "network") {
+          const ip = printer?.ip;
+          const port = printer?.port || 9100;
+
+          if (!ip) {
+            res.writeHead(400, { ...corsHeaders(), "Content-Type": "application/json" });
+            res.end(JSON.stringify({ error: "printer.ip obrigatório para modo network" }));
+            return;
+          }
+
+          console.log(`[Print] Enviando para ${ip}:${port} — Senha: ${ticket.displayNumber}`);
+
+          try {
+            await sendToPrinter(ip, port, escPosData);
+            console.log(`[Print] ✅ Impresso via rede: ${ticket.displayNumber}`);
+            res.writeHead(200, { ...corsHeaders(), "Content-Type": "application/json" });
+            res.end(JSON.stringify({ success: true, mode: "network", displayNumber: ticket.displayNumber }));
+            return;
+          } catch (networkErr) {
+            const canFallbackUsb = printer?.allowUsbFallback !== false;
+            if (!canFallbackUsb) {
+              throw networkErr;
+            }
+
+            console.warn(`[Print] Rede falhou (${networkErr.message}). Tentando USB local...`);
+            const usbResult = await sendToLocalUsbPrinter(escPosData, printer || {});
+            console.log(`[Print] ✅ Impresso via USB fallback (${usbResult.target}): ${ticket.displayNumber}`);
+            res.writeHead(200, { ...corsHeaders(), "Content-Type": "application/json" });
+            res.end(JSON.stringify({ success: true, mode: "usb_fallback", target: usbResult.target, displayNumber: ticket.displayNumber }));
+            return;
+          }
         }
 
-        const escPosData = buildEscPos(ticket, layout || {}, printer || {});
-
-        console.log(`[Print] Enviando para ${ip}:${port} — Senha: ${ticket.displayNumber}`);
-
-        await sendToPrinter(ip, port, escPosData);
-
-        console.log(`[Print] ✅ Impresso com sucesso: ${ticket.displayNumber}`);
+        const usbResult = await sendToLocalUsbPrinter(escPosData, printer || {});
+        console.log(`[Print] ✅ Impresso via USB (${usbResult.target}): ${ticket.displayNumber}`);
 
         res.writeHead(200, { ...corsHeaders(), "Content-Type": "application/json" });
-        res.end(JSON.stringify({ success: true, displayNumber: ticket.displayNumber }));
+        res.end(JSON.stringify({ success: true, mode: "usb", target: usbResult.target, displayNumber: ticket.displayNumber }));
       } catch (err) {
         console.error(`[Print] ❌ Erro:`, err.message);
         res.writeHead(500, { ...corsHeaders(), "Content-Type": "application/json" });
