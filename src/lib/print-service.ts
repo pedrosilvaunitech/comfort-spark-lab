@@ -140,7 +140,7 @@ export async function printViaPrintServer(ticket: Ticket, serverUrl?: string): P
     const config = printerConfig as unknown as PrintConfig;
     const layout = layoutConfig as unknown as TicketLayout;
 
-    const url = serverUrl || "http://localhost:3001/print";
+    const url = serverUrl || `http://${window.location.hostname}:3002/print`;
 
     const payload = {
       ticket: {
