@@ -269,6 +269,12 @@ const TotemSetup = () => {
               </div>
             )}
 
+            {isAndroid() && (
+              <p className="text-xs text-muted-foreground px-1">
+                No APK Android, use <strong>USB Nativo (Android)</strong>. O modo WebUSB é exclusivo do navegador Chrome.
+              </p>
+            )}
+
             {!isAndroid() && (
               <div
                 className={`flex items-center gap-3 p-3 rounded-lg border cursor-pointer transition-colors ${printMode === "webusb" ? "border-primary bg-primary/5" : "border-border"}`}
