@@ -5,21 +5,20 @@ import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Switch } from "@/components/ui/switch";
+import { Checkbox } from "@/components/ui/checkbox";
 import { Save, ShieldAlert } from "lucide-react";
-import { getSystemConfig, updateSystemConfig } from "@/lib/ticket-service";
+import { getSystemConfig, updateSystemConfig, getServiceTypes } from "@/lib/ticket-service";
 import { toast } from "sonner";
 
 export interface PrioritySettings {
   enabled: boolean;
   mode: "percentage" | "every_n" | "always_first";
-  /** percentage mode: % chance of calling priority next */
   percentage: number;
-  /** every_n mode: after every N normal tickets, call priority */
   everyN: number;
-  /** how many priority tickets to call in sequence when triggered */
   burstCount: number;
-  /** also apply to preferential tickets */
   includePreferential: boolean;
+  /** IDs of service_types that should be treated as priority categories */
+  priorityServiceTypeIds: string[];
 }
 
 const defaultSettings: PrioritySettings = {
@@ -29,16 +28,26 @@ const defaultSettings: PrioritySettings = {
   everyN: 3,
   burstCount: 1,
   includePreferential: true,
+  priorityServiceTypeIds: [],
 };
+
+interface ServiceType {
+  id: string;
+  name: string;
+  prefix: string;
+  is_active: boolean;
+}
 
 export function PriorityConfig() {
   const [settings, setSettings] = useState<PrioritySettings>(defaultSettings);
   const [saving, setSaving] = useState(false);
+  const [serviceTypes, setServiceTypes] = useState<ServiceType[]>([]);
 
   useEffect(() => {
     getSystemConfig("priority_settings").then((val) => {
       if (val) setSettings({ ...defaultSettings, ...(val as unknown as PrioritySettings) });
     });
+    getServiceTypes().then((types) => setServiceTypes(types || []));
   }, []);
 
   const handleSave = async () => {
@@ -54,6 +63,16 @@ export function PriorityConfig() {
   };
 
   const patch = (p: Partial<PrioritySettings>) => setSettings((s) => ({ ...s, ...p }));
+
+  const toggleServiceType = (id: string) => {
+    setSettings((s) => {
+      const ids = s.priorityServiceTypeIds || [];
+      return {
+        ...s,
+        priorityServiceTypeIds: ids.includes(id) ? ids.filter((x) => x !== id) : [...ids, id],
+      };
+    });
+  };
 
   return (
     <div className="space-y-6">
@@ -74,6 +93,34 @@ export function PriorityConfig() {
 
           {settings.enabled && (
             <>
+              {/* Category selection */}
+              <div>
+                <Label className="mb-2 block">Categorias prioritárias</Label>
+                <p className="text-xs text-muted-foreground mb-3">
+                  Selecione quais categorias de serviço devem ser tratadas como prioritárias. Senhas dessas categorias terão prioridade na chamada.
+                </p>
+                <div className="space-y-2 border rounded-lg p-3 bg-muted/30">
+                  {serviceTypes.length === 0 && (
+                    <p className="text-sm text-muted-foreground">Nenhuma categoria cadastrada.</p>
+                  )}
+                  {serviceTypes.map((type) => (
+                    <label key={type.id} className="flex items-center gap-3 cursor-pointer hover:bg-muted/50 rounded p-2 transition-colors">
+                      <Checkbox
+                        checked={(settings.priorityServiceTypeIds || []).includes(type.id)}
+                        onCheckedChange={() => toggleServiceType(type.id)}
+                      />
+                      <span className="font-medium text-sm">{type.prefix}</span>
+                      <span className="text-sm text-muted-foreground">— {type.name}</span>
+                    </label>
+                  ))}
+                </div>
+                {(settings.priorityServiceTypeIds || []).length > 0 && (
+                  <p className="text-xs text-muted-foreground mt-2">
+                    {(settings.priorityServiceTypeIds || []).length} categoria(s) selecionada(s)
+                  </p>
+                )}
+              </div>
+
               <div>
                 <Label className="mb-2 block">Modo de priorização</Label>
                 <Select value={settings.mode} onValueChange={(v: PrioritySettings["mode"]) => patch({ mode: v })}>
@@ -88,7 +135,7 @@ export function PriorityConfig() {
 
               {settings.mode === "always_first" && (
                 <p className="text-sm text-muted-foreground bg-muted p-3 rounded-lg">
-                  Senhas prioritárias/preferenciais serão <strong>sempre</strong> chamadas antes de qualquer senha normal na fila.
+                  Senhas das categorias prioritárias serão <strong>sempre</strong> chamadas antes de qualquer senha normal na fila.
                 </p>
               )}
 
