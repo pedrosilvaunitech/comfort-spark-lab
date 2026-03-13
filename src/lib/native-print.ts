@@ -299,13 +299,32 @@ export async function autoConnectWebUsbPrinter(vendorId?: number, productId?: nu
  */
 export async function pairWebUsbPrinter(): Promise<{ success: boolean; deviceName?: string; vendorId?: number; productId?: number }> {
   const usb = getNavigatorUsb();
-  if (!usb) return { success: false };
+  if (!usb) {
+    throw new Error('WebUSB não disponível neste navegador. Use o Chrome (desktop ou Android) fora de iframes.');
+  }
 
   try {
     const device = await usb.requestDevice({ filters: KNOWN_PRINTER_FILTERS });
-    await device.open();
-    await device.selectConfiguration(1);
-    await device.claimInterface(0);
+
+    if (!device.opened) {
+      await device.open();
+    }
+
+    // selectConfiguration can fail if already selected
+    try {
+      if (!device.configuration || device.configuration.configurationValue !== 1) {
+        await device.selectConfiguration(1);
+      }
+    } catch (cfgErr) {
+      console.warn('[WebUSB] selectConfiguration skipped:', cfgErr);
+    }
+
+    // claimInterface can fail if already claimed
+    try {
+      await device.claimInterface(0);
+    } catch (claimErr) {
+      console.warn('[WebUSB] claimInterface skipped (may already be claimed):', claimErr);
+    }
 
     cachedUsbDevice = device;
     return {
@@ -314,9 +333,15 @@ export async function pairWebUsbPrinter(): Promise<{ success: boolean; deviceNam
       vendorId: device.vendorId,
       productId: device.productId,
     };
-  } catch (err) {
+  } catch (err: any) {
     console.error('[WebUSB] Pair error:', err);
-    return { success: false };
+    if (err.name === 'NotFoundError') {
+      throw new Error('Nenhuma impressora selecionada. Selecione o dispositivo na janela do navegador.');
+    }
+    if (err.name === 'SecurityError') {
+      throw new Error('WebUSB bloqueado. Abra o app diretamente (não em iframe) ou use HTTPS.');
+    }
+    throw new Error(err.message || 'Erro ao parear impressora USB.');
   }
 }
 
