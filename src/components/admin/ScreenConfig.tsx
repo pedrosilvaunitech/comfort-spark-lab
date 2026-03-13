@@ -190,7 +190,7 @@ export function ScreenConfigPanel() {
               <div className="grid grid-cols-2 gap-3">
                 <div>
                   <Label className="text-xs">Fonte</Label>
-                  <Select value={config.panelFontFamily} onValueChange={(v) => update("panelFontFamily", v)}>
+                  <Select value={config.panelFontFamily || "default"} onValueChange={(v) => update("panelFontFamily", v === "default" ? "" : v)}>
                     <SelectTrigger className="h-8 text-sm"><SelectValue placeholder="Padrão" /></SelectTrigger>
                     <SelectContent>{FONT_OPTIONS.map(f => <SelectItem key={f.value} value={f.value}>{f.label}</SelectItem>)}</SelectContent>
                   </Select>
