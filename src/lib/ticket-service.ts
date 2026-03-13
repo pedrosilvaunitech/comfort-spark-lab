@@ -155,6 +155,7 @@ export async function callNextTicket(counterId: string, operatorId?: string): Pr
       status: "in_service",
       counter_id: counterId,
       called_at: new Date().toISOString(),
+      operator_id: operatorId || null,
     })
     .eq("id", nextTicket.id)
     .select()
