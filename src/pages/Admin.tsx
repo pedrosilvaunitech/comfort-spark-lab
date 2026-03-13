@@ -254,7 +254,7 @@ const Admin = () => {
       </aside>
 
       {/* Main Content */}
-      <div className="flex-1 flex flex-col min-w-0">
+      <div className={cn("flex-1 flex flex-col min-w-0 transition-all duration-300", sidebarOpen ? "lg:ml-64" : "lg:ml-16")}>
         {/* Top Bar */}
         <header className="sticky top-0 z-30 h-14 bg-card border-b border-border flex items-center justify-between px-4 lg:px-6 shrink-0">
           <div className="flex items-center gap-3">
