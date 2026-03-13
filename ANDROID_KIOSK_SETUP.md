@@ -51,38 +51,71 @@ npx cap open android
 Edite `android/app/src/main/AndroidManifest.xml`:
 
 ```xml
-<activity
-    ...
-    android:theme="@style/AppTheme.NoActionBar"
-    android:screenOrientation="landscape"
-    android:immersive="true"
-    android:keepScreenOn="true">
-    
-    <intent-filter>
-        <action android:name="android.intent.action.MAIN" />
-        <category android:name="android.intent.category.LAUNCHER" />
-        <category android:name="android.intent.category.HOME" />
-        <category android:name="android.intent.category.DEFAULT" />
-    </intent-filter>
-    
-    <!-- Auto-detect PT80KM printer -->
-    <intent-filter>
-        <action android:name="android.hardware.usb.action.USB_DEVICE_ATTACHED" />
-    </intent-filter>
-    <meta-data
-        android:name="android.hardware.usb.action.USB_DEVICE_ATTACHED"
-        android:resource="@xml/device_filter" />
-</activity>
-```
+<manifest xmlns:android="http://schemas.android.com/apk/res/android">
 
-Permissões:
+    <uses-feature android:name="android.hardware.usb.host" />
+    <uses-permission android:name="android.permission.USB_PERMISSION" />
+    <uses-permission android:name="android.permission.WAKE_LOCK" />
+    <uses-permission android:name="android.permission.RECEIVE_BOOT_COMPLETED" />
+    <uses-permission android:name="android.permission.INTERNET" />
+    <uses-permission android:name="android.permission.FOREGROUND_SERVICE" />
 
-```xml
-<uses-feature android:name="android.hardware.usb.host" />
-<uses-permission android:name="android.permission.USB_PERMISSION" />
-<uses-permission android:name="android.permission.WAKE_LOCK" />
-<uses-permission android:name="android.permission.RECEIVE_BOOT_COMPLETED" />
-<uses-permission android:name="android.permission.INTERNET" />
+    <application
+        ...
+        android:persistent="true">
+
+        <activity
+            ...
+            android:theme="@style/AppTheme.NoActionBar"
+            android:screenOrientation="landscape"
+            android:immersive="true"
+            android:keepScreenOn="true"
+            android:lockTaskMode="if_whitelisted"
+            android:launchMode="singleTask"
+            android:excludeFromRecents="true">
+            
+            <intent-filter>
+                <action android:name="android.intent.action.MAIN" />
+                <category android:name="android.intent.category.LAUNCHER" />
+                <category android:name="android.intent.category.HOME" />
+                <category android:name="android.intent.category.DEFAULT" />
+            </intent-filter>
+            
+            <!-- Auto-detect PT80KM printer -->
+            <intent-filter>
+                <action android:name="android.hardware.usb.action.USB_DEVICE_ATTACHED" />
+            </intent-filter>
+            <meta-data
+                android:name="android.hardware.usb.action.USB_DEVICE_ATTACHED"
+                android:resource="@xml/device_filter" />
+        </activity>
+
+        <!-- Boot receiver para iniciar automaticamente -->
+        <receiver
+            android:name=".BootReceiver"
+            android:enabled="true"
+            android:exported="true">
+            <intent-filter>
+                <action android:name="android.intent.action.BOOT_COMPLETED" />
+                <action android:name="android.intent.action.MY_PACKAGE_REPLACED" />
+            </intent-filter>
+        </receiver>
+
+        <!-- Device Admin para kiosk real -->
+        <receiver
+            android:name=".KioskDeviceAdmin"
+            android:permission="android.permission.BIND_DEVICE_ADMIN"
+            android:exported="true">
+            <meta-data
+                android:name="android.app.device_admin"
+                android:resource="@xml/device_admin" />
+            <intent-filter>
+                <action android:name="android.app.action.DEVICE_ADMIN_ENABLED" />
+            </intent-filter>
+        </receiver>
+
+    </application>
+</manifest>
 ```
 
 ### 7. Crie o filtro USB para a PT80KM
@@ -92,19 +125,34 @@ Crie `android/app/src/main/res/xml/device_filter.xml`:
 ```xml
 <?xml version="1.0" encoding="utf-8"?>
 <resources>
-    <!-- PT80KM Thermal Kiosk Printer -->
     <usb-device vendor-id="1155" product-id="30016" />
-    <!-- Outros modelos POS compatíveis -->
     <usb-device vendor-id="1155" />
 </resources>
 ```
 
-### 8. Crie o Plugin USB Printer
+### 8. Crie o Device Admin XML
 
-Crie `android/app/src/main/java/app/lovable/UsbPrinterPlugin.java`:
+Crie `android/app/src/main/res/xml/device_admin.xml`:
+
+```xml
+<?xml version="1.0" encoding="utf-8"?>
+<device-admin>
+    <uses-policies>
+        <limit-password />
+        <watch-login />
+        <reset-password />
+        <force-lock />
+        <wipe-data />
+    </uses-policies>
+</device-admin>
+```
+
+### 9. Crie o Plugin USB Printer
+
+Crie `android/app/src/main/java/app/lovable/comfortsparklab/UsbPrinterPlugin.java`:
 
 ```java
-package app.lovable;
+package app.lovable.comfortsparklab;
 
 import android.app.PendingIntent;
 import android.content.Context;
@@ -124,7 +172,7 @@ import java.util.HashMap;
 @CapacitorPlugin(name = "UsbPrinter")
 public class UsbPrinterPlugin extends Plugin {
     private static final String TAG = "UsbPrinter";
-    private static final String ACTION_USB_PERMISSION = "app.lovable.USB_PERMISSION";
+    private static final String ACTION_USB_PERMISSION = "app.lovable.comfortsparklab.USB_PERMISSION";
     
     private UsbManager usbManager;
     private UsbDevice connectedDevice;
@@ -134,15 +182,13 @@ public class UsbPrinterPlugin extends Plugin {
     @Override
     public void load() {
         usbManager = (UsbManager) getContext().getSystemService(Context.USB_SERVICE);
-        // Auto-detect PT80KM on load
         autoConnectPT80KM();
     }
     
     private void autoConnectPT80KM() {
         HashMap<String, UsbDevice> deviceList = usbManager.getDeviceList();
         for (UsbDevice device : deviceList.values()) {
-            // PT80KM: VID=0x0483 PID=0x7540
-            if (device.getVendorId() == 0x0483 && device.getProductId() == 0x7540) {
+            if (device.getVendorId() == 0x0483) {
                 if (usbManager.hasPermission(device)) {
                     connectToDevice(device);
                 } else {
@@ -220,7 +266,7 @@ public class UsbPrinterPlugin extends Plugin {
         }
         
         if (targetDevice == null) {
-            call.reject("PT80KM not found. Check USB connection.");
+            call.reject("Printer not found. Check USB connection.");
             return;
         }
         
@@ -241,7 +287,7 @@ public class UsbPrinterPlugin extends Plugin {
             result.put("success", true);
             call.resolve(result);
         } else {
-            call.reject("Failed to connect to PT80KM");
+            call.reject("Failed to connect");
         }
     }
 
@@ -260,10 +306,9 @@ public class UsbPrinterPlugin extends Plugin {
         String base64Data = call.getString("data", "");
         
         if (connection == null || endpoint == null) {
-            // Try auto-connect
             autoConnectPT80KM();
             if (connection == null || endpoint == null) {
-                call.reject("PT80KM not connected");
+                call.reject("Printer not connected");
                 return;
             }
         }
@@ -271,7 +316,6 @@ public class UsbPrinterPlugin extends Plugin {
         try {
             byte[] data = Base64.decode(base64Data, Base64.DEFAULT);
             
-            // Send in chunks for reliability (PT80KM max packet = 64 bytes)
             int chunkSize = 64;
             boolean success = true;
             for (int offset = 0; offset < data.length; offset += chunkSize) {
@@ -287,7 +331,7 @@ public class UsbPrinterPlugin extends Plugin {
             
             JSObject result = new JSObject();
             result.put("success", success);
-            result.put("message", success ? "Printed successfully" : "Transfer failed");
+            result.put("message", success ? "Printed" : "Transfer failed");
             call.resolve(result);
         } catch (Exception e) {
             call.reject("Print error: " + e.getMessage());
@@ -296,22 +340,85 @@ public class UsbPrinterPlugin extends Plugin {
 }
 ```
 
-### 9. Registre o Plugin
+### 10. Crie o BootReceiver
 
-Em `android/app/src/main/java/.../MainActivity.java`:
+Crie `android/app/src/main/java/app/lovable/comfortsparklab/BootReceiver.java`:
 
 ```java
-import app.lovable.UsbPrinterPlugin;
+package app.lovable.comfortsparklab;
+
+import android.content.BroadcastReceiver;
+import android.content.Context;
+import android.content.Intent;
+
+public class BootReceiver extends BroadcastReceiver {
+    @Override
+    public void onReceive(Context context, Intent intent) {
+        String action = intent.getAction();
+        if (Intent.ACTION_BOOT_COMPLETED.equals(action) || 
+            Intent.ACTION_MY_PACKAGE_REPLACED.equals(action)) {
+            Intent launchIntent = new Intent(context, MainActivity.class);
+            launchIntent.addFlags(Intent.FLAG_ACTIVITY_NEW_TASK);
+            context.startActivity(launchIntent);
+        }
+    }
+}
+```
+
+### 11. Crie o KioskDeviceAdmin
+
+Crie `android/app/src/main/java/app/lovable/comfortsparklab/KioskDeviceAdmin.java`:
+
+```java
+package app.lovable.comfortsparklab;
+
+import android.app.admin.DeviceAdminReceiver;
+import android.content.Context;
+import android.content.Intent;
+
+public class KioskDeviceAdmin extends DeviceAdminReceiver {
+    @Override
+    public void onEnabled(Context context, Intent intent) {}
+    
+    @Override
+    public void onDisabled(Context context, Intent intent) {}
+}
+```
+
+### 12. Configure o MainActivity.java
+
+Substitua `android/app/src/main/java/app/lovable/comfortsparklab/MainActivity.java`:
+
+```java
+package app.lovable.comfortsparklab;
+
+import android.app.admin.DevicePolicyManager;
+import android.content.ComponentName;
+import android.content.Context;
+import android.os.Build;
+import android.os.Bundle;
+import android.view.KeyEvent;
 import android.view.View;
 import android.view.WindowManager;
+import com.getcapacitor.BridgeActivity;
 
 public class MainActivity extends BridgeActivity {
+    private DevicePolicyManager dpm;
+    private ComponentName adminComponent;
+
     @Override
     public void onCreate(Bundle savedInstanceState) {
         registerPlugin(UsbPrinterPlugin.class);
         super.onCreate(savedInstanceState);
-        
-        // Kiosk mode - Immersive fullscreen
+
+        dpm = (DevicePolicyManager) getSystemService(Context.DEVICE_POLICY_SERVICE);
+        adminComponent = new ComponentName(this, KioskDeviceAdmin.class);
+
+        enableKioskMode();
+    }
+
+    private void enableKioskMode() {
+        // Fullscreen immersive
         getWindow().getDecorView().setSystemUiVisibility(
             View.SYSTEM_UI_FLAG_LAYOUT_STABLE
             | View.SYSTEM_UI_FLAG_LAYOUT_HIDE_NAVIGATION
@@ -320,13 +427,82 @@ public class MainActivity extends BridgeActivity {
             | View.SYSTEM_UI_FLAG_FULLSCREEN
             | View.SYSTEM_UI_FLAG_IMMERSIVE_STICKY
         );
-        
-        getWindow().addFlags(WindowManager.LayoutParams.FLAG_KEEP_SCREEN_ON);
+
+        // Keep screen on
+        getWindow().addFlags(
+            WindowManager.LayoutParams.FLAG_KEEP_SCREEN_ON
+            | WindowManager.LayoutParams.FLAG_DISMISS_KEYGUARD
+            | WindowManager.LayoutParams.FLAG_SHOW_WHEN_LOCKED
+            | WindowManager.LayoutParams.FLAG_TURN_SCREEN_ON
+        );
+
+        // Lock Task Mode (true kiosk - blocks Home, Recent, notifications)
+        if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.LOLLIPOP) {
+            if (dpm != null && dpm.isDeviceOwnerApp(getPackageName())) {
+                dpm.setLockTaskPackages(adminComponent, new String[]{getPackageName()});
+                startLockTask();
+            } else {
+                // Fallback: start lock task without device owner (user can exit)
+                try {
+                    startLockTask();
+                } catch (Exception e) {
+                    // Lock task not available without device owner
+                }
+            }
+        }
+    }
+
+    @Override
+    public void onWindowFocusChanged(boolean hasFocus) {
+        super.onWindowFocusChanged(hasFocus);
+        if (hasFocus) {
+            getWindow().getDecorView().setSystemUiVisibility(
+                View.SYSTEM_UI_FLAG_LAYOUT_STABLE
+                | View.SYSTEM_UI_FLAG_LAYOUT_HIDE_NAVIGATION
+                | View.SYSTEM_UI_FLAG_LAYOUT_FULLSCREEN
+                | View.SYSTEM_UI_FLAG_HIDE_NAVIGATION
+                | View.SYSTEM_UI_FLAG_FULLSCREEN
+                | View.SYSTEM_UI_FLAG_IMMERSIVE_STICKY
+            );
+        }
+    }
+
+    // Block all physical keys
+    @Override
+    public boolean onKeyDown(int keyCode, KeyEvent event) {
+        // Allow volume for accessibility, block everything else
+        if (keyCode == KeyEvent.KEYCODE_BACK
+            || keyCode == KeyEvent.KEYCODE_HOME
+            || keyCode == KeyEvent.KEYCODE_APP_SWITCH
+            || keyCode == KeyEvent.KEYCODE_MENU) {
+            return true; // consume = block
+        }
+        return super.onKeyDown(keyCode, event);
+    }
+
+    @Override
+    public void onBackPressed() {
+        // Block back button completely
     }
 }
 ```
 
-### 10. Gere o APK
+### 13. Ativar Device Owner (KIOSK REAL)
+
+Após instalar o APK no tablet, conecte via ADB e execute:
+
+```bash
+# Resetar o tablet para fábrica (necessário para device owner)
+# OU usar ADB com tablet sem conta Google:
+adb shell dpm set-device-owner app.lovable.comfortsparklab/.KioskDeviceAdmin
+```
+
+> ⚠️ **IMPORTANTE**: Para definir Device Owner, o tablet NÃO pode ter contas Google configuradas. Faça um factory reset antes e pule a configuração da conta Google.
+
+**Alternativa sem factory reset** (kiosk parcial):
+O app ainda funcionará em modo imersivo com tela cheia e bloqueio de back/home, mas o usuário pode eventualmente sair segurando botões.
+
+### 14. Gere o APK
 
 No Android Studio:
 
@@ -338,26 +514,33 @@ Para produção:
 1. **Build > Generate Signed Bundle / APK**
 2. Siga o wizard para criar/usar uma keystore
 
-### 11. Instale no Tablet/Totem
+### 15. Instale no Tablet/Totem
 
 ```bash
-adb install app-debug.apk
+adb install -r app-debug.apk
 ```
-
-### 12. Configure como Kiosk
-
-No Android:
-1. **Configurações > Apps > App Padrão > Tela Inicial**
-2. Selecione o app do totem
 
 ---
 
-## Fluxo de Impressão
+## O que o Modo Kiosk faz
 
-1. App detecta PT80KM automaticamente via USB
-2. Gera comandos ESC/POS com a senha (80mm)
-3. Envia via USB bulk transfer em chunks de 64 bytes
-4. Corte automático (GS V 66 03)
+| Recurso | Descrição |
+|---------|-----------|
+| **Lock Task Mode** | Bloqueia Home, Recentes, Notificações |
+| **Immersive Sticky** | Oculta barra de status e navegação |
+| **Keep Screen On** | Tela sempre ligada |
+| **Boot Receiver** | Inicia automaticamente ao ligar |
+| **Back Button Block** | Botão voltar desativado |
+| **Physical Keys Block** | Menu e App Switch bloqueados |
+| **Landscape Lock** | Fixa em modo paisagem |
+| **USB Auto-detect** | Detecta impressora PT80KM automaticamente |
+
+## Desbloquear Kiosk (para manutenção)
+
+```bash
+adb shell dpm remove-active-admin app.lovable.comfortsparklab/.KioskDeviceAdmin
+adb shell am force-stop app.lovable.comfortsparklab
+```
 
 ## Atualizando
 
@@ -367,4 +550,5 @@ npm install
 npm run build
 npx cap sync
 # Recompile o APK no Android Studio
+adb install -r app-debug.apk
 ```
