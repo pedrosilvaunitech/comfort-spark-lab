@@ -28,6 +28,7 @@ import { QueueManagement } from "@/components/admin/QueueManagement";
 import { TotemConfig } from "@/components/admin/TotemConfig";
 import { ScreenConfigPanel } from "@/components/admin/ScreenConfig";
 import { PriorityConfig } from "@/components/admin/PriorityConfig";
+import { PermissionsConfig } from "@/components/admin/PermissionsConfig";
 import { LicenseIndicator } from "@/components/admin/LicenseIndicator";
 import { toast } from "sonner";
 import { Link, Navigate } from "react-router-dom";
