@@ -372,19 +372,31 @@ export async function printTicket(
   // Check local device config first (totem-level config)
   const localPaired = isLocalPrinterPaired();
   const webUsbAvailable = hasWebUsb();
-  const hasLocalPrinter = localPaired && webUsbAvailable;
+  const localModeRaw = typeof window !== "undefined" ? window.localStorage.getItem("unitech_print_mode") : null;
+  const localPreferredMethod: PrintMethod | null =
+    localModeRaw === "android_usb" || localModeRaw === "webusb" || localModeRaw === "browser"
+      ? localModeRaw
+      : localModeRaw === "network"
+        ? "network_ip"
+        : null;
+
+  const hasAndroidLocalMode = isAndroid() && localPreferredMethod === "android_usb";
+  const hasWebUsbLocal = localPaired && webUsbAvailable;
+  const hasLocalPrinter = hasWebUsbLocal || hasAndroidLocalMode;
 
   console.log("[Print] Starting print:", {
     ticketId: ticket.id,
     displayNumber: ticket.display_number,
     localPaired,
     webUsbAvailable,
+    localPreferredMethod,
+    hasAndroidLocalMode,
     hasLocalPrinter,
     preferredMethod,
   });
 
-  // If local printer is paired, use WebUSB directly — NEVER fall back to browser popup
-  if (hasLocalPrinter && !preferredMethod) {
+  // If local WebUSB printer is paired, use it directly — NEVER fall back to browser popup
+  if (hasWebUsbLocal && !preferredMethod) {
     try {
       const success = await printViaWebUsbMethod(ticket);
       if (success) return { success: true, method: "webusb" };
@@ -401,23 +413,26 @@ export async function printTicket(
   // Fallback: check server printer config
   const config = (await getSystemConfig("printer")) as unknown as PrintConfig;
   console.log("[Print] Server printer config:", { enabled: config?.enabled, connectionType: config?.connectionType });
-  
-  if (!config?.enabled && !hasLocalPrinter) {
-    console.log("[Print] Printing disabled (config.enabled=false, no local printer)");
+
+  // Respect local per-device modes even when global printing is disabled
+  if (!config?.enabled && !hasLocalPrinter && localPreferredMethod !== "network_ip") {
+    console.log("[Print] Printing disabled (config.enabled=false, no local mode active)");
     return { success: true, method: "disabled" };
   }
 
-  const defaultMethod = isAndroid() ? "android_usb" : hasWebUsb() ? "webusb" : 
-    (config?.connectionType === "network" ? "network_ip" : "browser");
+  const defaultMethod =
+    localPreferredMethod ||
+    (isAndroid() ? "android_usb" : webUsbAvailable ? "webusb" : (config?.connectionType === "network" ? "network_ip" : "browser"));
   const method = preferredMethod || defaultMethod;
 
   // Build fallback chain
   const useSilentOnly = method === "webusb" || method === "android_usb";
+  const shouldTryNetwork = localPreferredMethod === "network_ip" || config?.connectionType === "network";
 
   const methods: { name: PrintMethod; fn: () => Promise<boolean> }[] = [
     ...(isAndroid() ? [{ name: "android_usb" as PrintMethod, fn: () => printViaAndroidUsbMethod(ticket) }] : []),
-    ...(hasWebUsb() ? [{ name: "webusb" as PrintMethod, fn: () => printViaWebUsbMethod(ticket) }] : []),
-    ...(config?.connectionType === "network" ? [{ name: "network_ip" as PrintMethod, fn: () => printViaNetworkIp(ticket) }] : []),
+    ...(webUsbAvailable ? [{ name: "webusb" as PrintMethod, fn: () => printViaWebUsbMethod(ticket) }] : []),
+    ...(shouldTryNetwork ? [{ name: "network_ip" as PrintMethod, fn: () => printViaNetworkIp(ticket) }] : []),
     { name: "print_server", fn: () => printViaPrintServer(ticket) },
     ...(!useSilentOnly ? [{ name: "browser" as PrintMethod, fn: () => printViaBrowser(ticket) }] : []),
     { name: "cloud", fn: () => printViaCloud(ticket) },
