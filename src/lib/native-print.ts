@@ -18,10 +18,26 @@ export function isAndroid(): boolean {
 }
 
 /**
- * Check if WebUSB API is available (Chrome on Android/Desktop)
+ * Check if WebUSB API is available and usable
  */
+export function getWebUsbBlockReason(): string | null {
+  if (!("usb" in navigator)) {
+    return "WebUSB não está disponível neste navegador. Use Google Chrome.";
+  }
+
+  if (!window.isSecureContext) {
+    return "WebUSB exige HTTPS (ou localhost).";
+  }
+
+  if (window.top !== window.self) {
+    return "WebUSB não funciona dentro de iframe/preview. Abra o sistema em aba/janela própria.";
+  }
+
+  return null;
+}
+
 export function hasWebUsb(): boolean {
-  return 'usb' in navigator;
+  return getWebUsbBlockReason() === null;
 }
 
 // Cache the WebUSB device so we don't re-prompt every print
