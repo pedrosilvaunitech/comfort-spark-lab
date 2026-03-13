@@ -8,6 +8,7 @@ import { printTicket } from "@/lib/print-service";
 import { supabase } from "@/integrations/supabase/client";
 import type { ServiceType, Ticket } from "@/lib/ticket-service";
 import { Printer, User, FileText, Heart, ArrowLeft } from "lucide-react";
+import { isAndroid } from "@/lib/native-print";
 import { useScreenConfig } from "@/hooks/use-screen-config";
 import { useKioskMode } from "@/lib/kiosk-mode";
 import { useNavigate } from "react-router-dom";
